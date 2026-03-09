@@ -1,0 +1,68 @@
+---
+title: Device Overview
+description: Overview of all devices supported by SAFI ControlHub
+---
+
+SAFI ControlHub supports real-time monitoring and control of multiple rocket systems, telemetry devices, and testing equipment. Each device streams data via WebSocket and REST APIs.
+
+## Supported Devices
+
+<CardGroup cols={2}>
+  <Card title="XITZIN-II" icon="rocket" href="/devices/xitzin-ii">
+    Rocket system with real-time telemetry, flight phases, and battery monitoring
+  </Card>
+  
+  <Card title="AKBAL-II" icon="rocket-launch" href="/devices/akbal-ii">
+    Rocket system with live telemetry, 3D visualization, and mission state tracking
+  </Card>
+  
+  <Card title="Laniakea" icon="satellite" href="/devices/laniakea">
+    GPS telemetry system with acceleration monitoring and battery tracking
+  </Card>
+  
+  <Card title="Filamentadora" icon="industry" href="/devices/filamentadora">
+    Composite winding system for rocket motor fabrication
+  </Card>
+  
+  <Card title="Banco de Pruebas" icon="flask" href="/devices/banco-de-pruebas">
+    Static test bench for rocket motor characterization
+  </Card>
+</CardGroup>
+
+## Data Channels
+
+All devices communicate through WebSocket channels defined in `src/websocket.js`:
+
+| Channel | Device | Update Rate | Data Source |
+|---------|--------|-------------|-------------|
+| `nuevos-datos` | AKBAL-II | 100ms | `data` table |
+| `xitzin2-datos` | XITZIN-II | 200ms | `xitzin_2_data` table |
+| `laniakea` | Laniakea | 200ms | `datos_laniakea` table |
+| `banco-datos` | Banco de Pruebas | 500ms | `prueba_estatica_0` table |
+| `baterias` | AKBAL-II Batteries | 5s | `battery_status` table |
+| `xitzin2-baterias` | XITZIN-II Batteries | 5s | `xitzin_2_batteries` table |
+
+## REST API Endpoints
+
+All devices expose REST endpoints in `src/routes/data.routes.js`:
+
+- `GET/POST /api/data` - AKBAL-II telemetry
+- `GET/POST /api/xitzin2data` - XITZIN-II telemetry
+- `GET/POST /api/laniakea` - Laniakea telemetry
+- `GET/POST /api/bancodepruebas` - Test bench data
+- `POST /api/ignicion` - Test bench ignition command
+- `GET/POST /api/batteries` - AKBAL-II battery status
+- `GET/POST /api/xitzin2batteries` - XITZIN-II battery status
+
+## Device Communication
+
+Devices communicate with the backend via:
+
+1. **Serial Communication** - Python scripts read data from Arduino/ESP32 boards
+2. **HTTP POST** - Data is posted to REST endpoints
+3. **WebSocket Broadcasting** - Real-time updates pushed to connected clients
+4. **Database Storage** - PostgreSQL stores historical data
+
+<Info>
+See individual device pages for detailed data field specifications and monitoring capabilities.
+</Info>

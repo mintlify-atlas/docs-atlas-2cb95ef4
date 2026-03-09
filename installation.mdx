@@ -1,0 +1,551 @@
+---
+title: 'Installation'
+description: 'Complete installation guide for SAFI ControlHub'
+---
+
+## System Requirements
+
+Before installing SAFI ControlHub, ensure your system meets these requirements:
+
+- **Operating System**: Linux, macOS, or Windows
+- **Node.js**: v16.0.0 or higher
+- **PostgreSQL**: v12.0 or higher
+- **Memory**: Minimum 2GB RAM (4GB recommended)
+- **Storage**: 500MB for application and dependencies
+
+<Note>
+For serial device communication, Linux systems require appropriate permissions for `/dev/ttyUSB*` devices.
+</Note>
+
+## Database Setup
+
+### Install PostgreSQL
+
+<CodeGroup>
+
+```bash Ubuntu/Debian
+sudo apt update
+sudo apt install postgresql postgresql-contrib
+sudo systemctl start postgresql
+sudo systemctl enable postgresql
+```
+
+```bash macOS
+brew install postgresql@14
+brew services start postgresql@14
+```
+
+```bash Windows
+# Download installer from:
+# https://www.postgresql.org/download/windows/
+# Run the installer and follow the setup wizard
+```
+
+</CodeGroup>
+
+### Create Database
+
+Create the required database and user:
+
+```bash
+# Access PostgreSQL shell
+sudo -u postgres psql
+```
+
+Execute these commands:
+
+```sql
+-- Create database
+CREATE DATABASE rocket_data;
+
+-- Create user (optional)
+CREATE USER safi_user WITH PASSWORD 'your_secure_password';
+GRANT ALL PRIVILEGES ON DATABASE rocket_data TO safi_user;
+
+-- Connect to database
+\c rocket_data
+```
+
+### Initialize Schema
+
+The database schema includes tables for users, tasks, and telemetry data. Run the initialization script:
+
+```bash
+psql -U postgres -d rocket_data -f database/init.sql
+```
+
+<details>
+<summary>View the complete schema (database/init.sql)</summary>
+
+```sql
+CREATE TABLE task(
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) UNIQUE NOT NULL,
+    description TEXT
+);
+
+ALTER TABLE task ADD COLUMN user_id INTEGER REFERENCES users(id);
+
+-- remove unique from title
+ALTER TABLE task DROP CONSTRAINT task_title_key;
+
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    role INTEGER
+);
+
+ALTER TABLE users ADD COLUMN gravatar VARCHAR(255);
+```
+
+</details>
+
+<Warning>
+Additional telemetry tables (`data`, `battery_status`, `xitzin_2_data`, `prueba_estatica_0`, `datos_laniakea`) need to be created based on your mission requirements. These are referenced in the WebSocket configuration.
+</Warning>
+
+## Backend Installation
+
+<Steps>
+
+### Clone Repository
+
+```bash
+git clone <repository-url>
+cd source
+```
+
+### Install Dependencies
+
+The backend uses Node.js with Express and WebSocket support:
+
+```bash
+npm install
+```
+
+This installs the following key packages from `package.json`:
+
+```json
+{
+  "dependencies": {
+    "express": "^4.18.2",
+    "socket.io": "^4.8.1",
+    "pg": "^8.11.1",
+    "serialport": "^12.0.0",
+    "cors": "^2.8.5",
+    "cookie-parser": "^1.4.6",
+    "bcrypt": "^5.1.0",
+    "jsonwebtoken": "^9.0.0",
+    "morgan": "^1.10.0",
+    "zod": "^3.21.4"
+  }
+}
+```
+
+### Configure Environment
+
+Create a `.env` file in the root directory:
+
+```bash
+# Server Configuration
+PORT=3000
+
+# Database Configuration
+PG_HOST=localhost
+PG_PORT=5432
+PG_USER=postgres
+PG_PASSWORD=admin@123
+PG_DATABASE=rocket_data
+
+# CORS Configuration
+ORIGIN=http://localhost:5173
+```
+
+<Note>
+These values match the defaults in `src/config.js`. The application will use these environment variables if present, otherwise fall back to the defaults.
+</Note>
+
+### Verify Configuration
+
+The configuration is loaded from `src/config.js:1`:
+
+```javascript
+export const PORT = process.env.PORT || 3000;
+
+export const PG_PORT = process.env.PG_PORT || 5432;
+export const PG_HOST = process.env.PG_HOST || "localhost";
+export const PG_USER = process.env.PG_USER || "postgres";
+export const PG_PASSWORD = process.env.PG_PASSWORD || "admin@123";
+export const PG_DATABASE = process.env.PG_DATABASE || "rocket_data";
+
+export const ORIGIN = process.env.ORIGIN || "http://localhost:5173";
+```
+
+### Test Database Connection
+
+Verify the PostgreSQL connection is working:
+
+```bash
+node -e "import('./src/db.js').then(() => console.log('Connection successful'))"
+```
+
+You should see:
+```
+Database connected
+Connection successful
+```
+
+### Start the Server
+
+<CodeGroup>
+
+```bash Development
+npm run dev
+```
+
+```bash Production
+npm start
+```
+
+</CodeGroup>
+
+Successful startup output:
+
+```
+Database connected
+Servidor HTTP + WS corriendo en puerto 3000
+```
+
+</Steps>
+
+## Frontend Installation
+
+<Steps>
+
+### Navigate to Frontend Directory
+
+```bash
+cd frontend
+```
+
+### Install Dependencies
+
+The frontend is built with React and Vite:
+
+```bash
+npm install
+```
+
+Key frontend dependencies from `frontend/package.json`:
+
+```json
+{
+  "dependencies": {
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-router-dom": "^6.23.0",
+    "socket.io-client": "^4.8.1",
+    "axios": "^1.4.0",
+    "@mui/material": "^5.15.16",
+    "@mui/x-charts": "^7.3.2",
+    "@mui/x-data-grid": "^7.3.2",
+    "@tremor/react": "^3.16.2",
+    "chart.js": "^4.4.2",
+    "react-chartjs-2": "^5.2.0",
+    "leaflet": "^1.9.4",
+    "react-leaflet": "^4.2.1"
+  }
+}
+```
+
+### Configure Vite
+
+The Vite configuration is set up in `frontend/vite.config.js:1`:
+
+```javascript
+import { defineConfig } from 'vite'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig({
+  plugins: [react(), nodePolyfills()],
+  server: {
+    host: true,
+    port: 5173,
+  },
+})
+```
+
+### Start Development Server
+
+```bash
+npm run dev
+```
+
+The frontend will be accessible at `http://localhost:5173`
+
+### Build for Production
+
+To create an optimized production build:
+
+```bash
+npm run build
+```
+
+Serve the built files:
+
+```bash
+npm start
+```
+
+</Steps>
+
+## Serial Device Configuration (Optional)
+
+<Note>
+Serial communication is optional and only required if you're connecting physical devices directly to the server.
+</Note>
+
+### Configure Serial Port
+
+Edit `src/SerialReader.js:5` to match your device:
+
+```javascript
+const SERIAL_PORT = "/dev/ttyUSB0"; // Change to your device port
+const BAUD_RATE = 9600;             // Match your device baud rate
+```
+
+### Set Permissions (Linux)
+
+Grant access to the serial port:
+
+```bash
+# Add user to dialout group
+sudo usermod -a -G dialout $USER
+
+# Or set permissions directly
+sudo chmod 666 /dev/ttyUSB0
+```
+
+<Warning>
+You may need to log out and back in for group changes to take effect.
+</Warning>
+
+## CORS Configuration
+
+The backend allows connections from specific origins defined in `src/app.js:17`:
+
+```javascript
+const allowedOrigins = [
+  'http://localhost:5173',
+  'http://192.168.1.8:5173',
+  'http://192.168.100.18:5173',
+  'http://192.168.1.140:5173',
+  'http://192.168.1.130:5173',
+  'http://172.26.50.96:5173/', 
+  'http://192.168.1.107:5173'
+];
+```
+
+To add your own origin:
+
+1. Edit `src/app.js`
+2. Add your URL to the `allowedOrigins` array
+3. Restart the backend server
+
+## Production Deployment
+
+### Environment Variables
+
+For production, set secure values:
+
+```bash
+# Use strong passwords
+PG_PASSWORD=your_secure_password_here
+
+# Use production database
+PG_DATABASE=rocket_data_prod
+
+# Set production origin
+ORIGIN=https://your-domain.com
+```
+
+### Process Management
+
+Use PM2 to keep the server running:
+
+```bash
+# Install PM2
+npm install -g pm2
+
+# Start backend
+pm2 start src/index.js --name "safi-backend"
+
+# Start on system boot
+pm2 startup
+pm2 save
+```
+
+### Reverse Proxy (nginx)
+
+Example nginx configuration:
+
+```nginx
+server {
+    listen 80;
+    server_name your-domain.com;
+
+    # Frontend
+    location / {
+        proxy_pass http://localhost:5173;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # Backend API
+    location /api {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection 'upgrade';
+        proxy_set_header Host $host;
+        proxy_cache_bypass $http_upgrade;
+    }
+
+    # WebSocket
+    location /socket.io {
+        proxy_pass http://localhost:3000;
+        proxy_http_version 1.1;
+        proxy_set_header Upgrade $http_upgrade;
+        proxy_set_header Connection "upgrade";
+    }
+}
+```
+
+## Verification
+
+After installation, verify all components:
+
+<Steps>
+
+### Check Backend Health
+
+```bash
+curl http://localhost:3000/api/ping
+```
+
+Expected response:
+```json
+{"now":"2026-03-09T..."}
+```
+
+### Check WebSocket Connection
+
+Open browser console at `http://localhost:5173` and check for:
+
+```
+WS conectado: <socket-id>
+```
+
+### Verify Database Tables
+
+```bash
+psql -U postgres -d rocket_data -c "\dt"
+```
+
+You should see: `users`, `task`, and telemetry tables
+
+### Test Real-Time Updates
+
+The WebSocket server (configured in `src/websocket.js:1`) automatically:
+
+- Emits initial data on connection
+- Updates clients at different intervals:
+  - `nuevos-datos`: 100ms
+  - `banco-datos`: 500ms
+  - `xitzin2-datos`: 200ms
+  - `baterias`: 5000ms
+  - `laniakea`: 200ms
+
+</Steps>
+
+## Troubleshooting
+
+### Database Connection Issues
+
+**Problem**: `Database connected` message not appearing
+
+**Solution**:
+```bash
+# Check PostgreSQL status
+sudo systemctl status postgresql
+
+# Verify connection manually
+psql -U postgres -d rocket_data -c "SELECT NOW();"
+
+# Check pg_hba.conf authentication
+sudo nano /etc/postgresql/*/main/pg_hba.conf
+```
+
+### Port Conflicts
+
+**Problem**: Port 3000 or 5173 already in use
+
+**Solution**:
+```bash
+# Find process using port
+lsof -i :3000
+
+# Kill process or use different port
+PORT=3001 npm run dev
+```
+
+### Module Not Found
+
+**Problem**: `Cannot find module` errors
+
+**Solution**:
+```bash
+# Clear cache and reinstall
+rm -rf node_modules package-lock.json
+npm install
+```
+
+### WebSocket Connection Failed
+
+**Problem**: Frontend can't connect to WebSocket
+
+**Solution**:
+1. Check backend is running on correct port
+2. Verify CORS origins in `src/app.js:17`
+3. Check browser console for specific error
+4. Ensure firewall allows connections
+
+## Next Steps
+
+<CardGroup cols={2}>
+
+<Card title="Quick Start" icon="rocket" href="/quickstart">
+  Get up and running quickly with the essentials
+</Card>
+
+<Card title="API Reference" icon="code" href="/api/overview">
+  Explore available endpoints and WebSocket events
+</Card>
+
+<Card title="Configuration" icon="gear" href="/development/environment-variables">
+  Advanced configuration options
+</Card>
+
+<Card title="Device Setup" icon="microchip" href="/devices/overview">
+  Configure serial devices and data sources
+</Card>
+
+</CardGroup>

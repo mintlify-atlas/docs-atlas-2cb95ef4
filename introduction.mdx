@@ -1,0 +1,80 @@
+---
+title: "Introduction"
+description: "Real-time telemetry monitoring and control platform for rocket systems and test operations"
+---
+
+## Welcome to SAFI ControlHub
+
+SAFI ControlHub is a comprehensive platform for monitoring and controlling rocket systems in real-time. Built for aerospace teams, it provides live telemetry visualization, test bench control, and multi-device management through an intuitive web interface.
+
+<CardGroup cols={2}>
+  <Card title="Quick Start" icon="rocket" href="/quickstart">
+    Get your first system connected in minutes
+  </Card>
+  <Card title="Platform Features" icon="gauge-high" href="/features/dashboard">
+    Explore real-time monitoring capabilities
+  </Card>
+  <Card title="API Reference" icon="code" href="/api/overview">
+    Integrate with REST and WebSocket APIs
+  </Card>
+  <Card title="Development Guide" icon="wrench" href="/development/local-setup">
+    Set up your local development environment
+  </Card>
+</CardGroup>
+
+## Key Features
+
+<CardGroup cols={2}>
+  <Card title="Real-Time Telemetry" icon="satellite-dish">
+    Monitor live data streams from multiple rocket systems via WebSocket connections with sub-second latency
+  </Card>
+  <Card title="Test Bench Control" icon="flask">
+    Execute test sequences, trigger ignition commands, and monitor engine performance metrics
+  </Card>
+  <Card title="Multi-Device Support" icon="layer-group">
+    Manage XITZIN-II, AKBAL-II, Laniakea, and custom hardware configurations from a single dashboard
+  </Card>
+  <Card title="Advanced Visualization" icon="chart-line">
+    View 3D rocket models, real-time charts, battery status, and geographic tracking with interactive maps
+  </Card>
+</CardGroup>
+
+## Supported Devices
+
+ControlHub supports multiple rocket and test systems:
+
+- **XITZIN-II** - Primary rocket telemetry system with battery monitoring
+- **AKBAL-II** - Secondary rocket platform with enhanced sensors
+- **Laniakea** - Advanced telemetry and data collection system
+- **Banco de Pruebas** - Static test bench for engine performance testing
+- **Filamentadora** - Composite filament winding system
+
+<Note>
+Each device streams real-time data through dedicated WebSocket channels with configurable update intervals.
+</Note>
+
+## Platform Architecture
+
+The platform consists of three main components:
+
+1. **Backend API** - Express.js server with PostgreSQL database and WebSocket support
+2. **Frontend Dashboard** - React-based UI with real-time data visualization using D3.js and Three.js
+3. **Hardware Integration** - Serial port communication for direct device connectivity
+
+<Info>
+ControlHub is designed for both local network deployment and cloud-based operations, with support for multiple concurrent users and device streams.
+</Info>
+
+## Next Steps
+
+<Steps>
+  <Step title="Installation">
+    Follow the [installation guide](/installation) to set up the platform
+  </Step>
+  <Step title="Quick Start">
+    Connect your first device using the [quickstart tutorial](/quickstart)
+  </Step>
+  <Step title="Explore Features">
+    Learn about [real-time telemetry](/features/real-time-telemetry) and [data visualization](/features/data-visualization)
+  </Step>
+</Steps>

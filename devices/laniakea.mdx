@@ -1,0 +1,190 @@
+---
+title: Laniakea Telemetry System
+description: GPS-based telemetry system with acceleration and battery monitoring
+---
+
+Laniakea is a standalone telemetry system providing GPS tracking, acceleration monitoring, and battery status for rocket flights.
+
+## Overview
+
+The Laniakea dashboard (`frontend/src/pages/Laniakea.jsx`) provides comprehensive telemetry monitoring:
+
+- GPS position tracking with live map
+- Multi-axis acceleration monitoring
+- Voltage and current monitoring
+- Battery status for up to 5 batteries
+- Real-time D3.js charts
+
+## Data Streams
+
+### Primary Telemetry Channel: `laniakea`
+
+**WebSocket Channel:** `laniakea`  
+**Update Rate:** 200ms  
+**Database Table:** `datos_laniakea`  
+**Endpoint:** `GET/POST /api/laniakea`
+
+<Accordion title="Telemetry Data Fields">
+
+| Field | Type | Description | Units |
+|-------|------|-------------|-------|
+| `date` | string | Data timestamp date | - |
+| `time` | string | Data timestamp time | - |
+| `latitud` | float | GPS latitude | decimal degrees |
+| `longitud` | float | GPS longitude | decimal degrees |
+| `altitud` | float | GPS altitude | meters |
+| `aceleracion` | float | Total acceleration magnitude | m/s² |
+| `accel_x` | float | X-axis acceleration | m/s² |
+| `accel_y` | float | Y-axis acceleration | m/s² |
+| `accel_z` | float | Z-axis acceleration | m/s² |
+| `conops` | string | Mission state identifier | - |
+| `voltaje` | float | System voltage | V |
+| `corriente` | float | System current | A |
+
+</Accordion>
+
+### Battery Monitoring Channel: `baterias`
+
+**WebSocket Channel:** `baterias`  
+**Update Rate:** 5 seconds  
+**Database Table:** `battery_status`  
+**Endpoint:** `GET/POST /api/batteries`
+
+<Note>
+Laniakea shares the same battery monitoring channel as AKBAL-II.
+</Note>
+
+## Monitoring Features
+
+### Left Panel Components
+
+<CardGroup cols={1}>
+  <Card title="GPS Map" icon="map-location-dot">
+    OpenStreetMap integration with live marker updates at zoom level 22
+  </Card>
+  
+  <Card title="Battery Status" icon="battery-three-quarters">
+    Up to 5 batteries with:
+    - Battery level progress bars (color-coded: red below 50%, blue 50% and above)
+    - Voltage readings
+    - Temperature monitoring
+  </Card>
+</CardGroup>
+
+### Right Panel: Telemetry Charts
+
+Four real-time D3.js line charts:
+
+<Accordion title="Chart Specifications">
+
+**Chart Dimensions:**
+- Width: 400px (including margins)
+- Height: 300px (including margins)
+- Margins: top 35px, right 5px, bottom 18px, left 40px
+
+**Charts:**
+1. **Altitude Chart** - GPS altitude over time (m)
+2. **Acceleration Chart** - Total acceleration magnitude (m/s²)
+3. **Voltage Chart** - System voltage (V)
+4. **Current Chart** - System current (A)
+
+**Styling:**
+- Line color: `#61DAFB` (cyan)
+- Line width: 3px
+- Background: `#112240` (dark blue)
+
+**Location:** `frontend/src/pages/Laniakea.jsx:169-223`
+
+</Accordion>
+
+### Real-Time Data Display
+
+Shows latest values for:
+- Timestamp (date + time)
+- Latitude
+- Longitude
+- Altitude (m)
+- Acceleration (m/s²)
+- Voltage (V)
+- Current (A)
+- CONOPS state
+
+### Acceleration Vector Table
+
+Displays individual acceleration components:
+- Accel X (m/s²)
+- Accel Y (m/s²)
+- Accel Z (m/s²)
+
+## Hardware Communication
+
+Laniakea uses an ESP32 microcontroller connected via USB serial.
+
+### Python Data Bridge
+
+**Script:** `src/arduino/laniakea.py`  
+**Serial Port:** `/dev/ttyUSB0`  
+**Baud Rate:** 115200
+
+<Accordion title="Serial Data Format">
+
+The ESP32 sends comma-separated values:
+
+```
+lat,long,alt
+```
+
+**Example:**
+```
+19.123456,-99.234567,2250.5
+```
+
+The Python script parses this and constructs a full JSON payload:
+
+```python
+payload = {
+    "timestamp": datetime.now().isoformat(),
+    "latitud": latitud,
+    "longitud": longitud,
+    "aceleracion": 0.0,
+    "accel_x": 0.0,
+    "accel_y": 0.0,
+    "accel_z": 0.0,
+    "altitud": altitud,
+    "conops": "",
+    "voltaje": 0.0,
+    "corriente": 0.0
+}
+```
+
+<Warning>
+Acceleration, voltage, and current fields are currently hardcoded to 0.0 in the Python script. Only GPS data (lat, long, alt) is transmitted from the ESP32.
+</Warning>
+
+</Accordion>
+
+### Data Flow
+
+1. ESP32 reads GPS module and sends `lat,long,alt` via serial
+2. Python script (`laniakea.py`) reads serial data
+3. Data is posted to `POST /api/laniakea`
+4. Backend stores in `datos_laniakea` table
+5. WebSocket broadcasts on `laniakea` channel every 200ms
+6. Frontend dashboard updates in real-time
+
+## WebSocket Subscription
+
+```javascript
+// frontend/src/pages/Laniakea.jsx:94
+const rawData = useWebsocket('laniakea', SOCKET_URL);
+```
+
+Data is processed in `useEffect` hook (lines 96-135) and mapped to component state.
+
+## Source Code References
+
+- **Frontend Dashboard:** `frontend/src/pages/Laniakea.jsx`
+- **Python Bridge:** `src/arduino/laniakea.py`
+- **API Routes:** `src/routes/data.routes.js:39-43`
+- **WebSocket Handler:** `src/websocket.js:106-110`
+- **Database Table:** `datos_laniakea`

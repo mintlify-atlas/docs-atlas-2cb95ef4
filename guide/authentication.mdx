@@ -1,0 +1,210 @@
+---
+title: Authentication & Account Management
+description: Learn how to sign up, log in, and manage your SAFI ControlHub account
+---
+
+## Overview
+
+SAFI ControlHub uses a secure authentication system to protect your data and control access to devices. This guide covers account creation, login, profile management, and user roles.
+
+## User Roles
+
+ControlHub supports two user roles with different access levels:
+
+- **Guardia (Guard)** - Standard user with monitoring access
+- **Administrador (Administrator)** - Full access including device control and user management
+
+<Note>
+Your user role determines which features and devices you can access within the platform.
+</Note>
+
+## Creating an Account
+
+<Steps>
+  <Step title="Navigate to Registration">
+    From the login page, click the registration link to access the sign-up form.
+  </Step>
+  
+  <Step title="Fill in Your Information">
+    Complete the registration form with:
+    - **Username** - Your display name (1-255 characters)
+    - **Email** - A valid email address for your account
+    - **Password** - Secure password (minimum 6 characters)
+    - **User Type** - Select either Guardia or Administrador
+  </Step>
+  
+  <Step title="Submit Registration">
+    Click the "Register" button to create your account. You'll be automatically logged in upon successful registration.
+  </Step>
+</Steps>
+
+<Warning>
+The password must be at least 6 characters long. Choose a strong password to protect your account.
+</Warning>
+
+### Validation Requirements
+
+Your registration information must meet these criteria:
+
+- **Name**: Required, 1-255 characters
+- **Email**: Must be a valid email format and unique in the system
+- **Password**: Minimum 6 characters, maximum 255 characters
+- **User Type**: Must select either Guardia or Administrador
+
+## Logging In
+
+<Steps>
+  <Step title="Access the Login Page">
+    Navigate to the SAFI ControlHub login page.
+  </Step>
+  
+  <Step title="Enter Credentials">
+    Provide your registered email address and password.
+  </Step>
+  
+  <Step title="Sign In">
+    Click "Log in" to access your dashboard. Upon successful authentication, you'll be redirected to the main device selection page.
+  </Step>
+</Steps>
+
+### Login Errors
+
+If you encounter login issues:
+
+- **"El correo no esta registrado"** - The email is not registered in the system
+- **"La contraseña es incorrecta"** - The password is incorrect
+
+<Tip>
+Your session remains active for 24 hours. After this period, you'll need to log in again.
+</Tip>
+
+## Managing Your Profile
+
+Once logged in, you can view and manage your profile information.
+
+### Viewing Your Profile
+
+<Steps>
+  <Step title="Access Profile Page">
+    Click on your profile icon or navigate to the Profile section from the main menu.
+  </Step>
+  
+  <Step title="View Your Information">
+    Your profile displays:
+    - Profile avatar (automatically generated from your email using Gravatar)
+    - Username
+    - Email address
+    - User type (Guardia or Administrador)
+    - Unique user ID
+  </Step>
+</Steps>
+
+### Profile Avatar
+
+SAFI ControlHub uses **Gravatar** to display your profile picture. To customize your avatar:
+
+1. Create a free account at [Gravatar.com](https://gravatar.com)
+2. Upload your preferred profile image
+3. Link it to the email address used in ControlHub
+4. Your custom avatar will appear automatically
+
+<Note>
+If you don't have a Gravatar account, a default avatar will be displayed.
+</Note>
+
+## Updating Account Information
+
+Administrators can update user account information including username, email, password, and user role.
+
+<Steps>
+  <Step title="Navigate to User Management">
+    Access the user management section (Administrator access required).
+  </Step>
+  
+  <Step title="Select User to Edit">
+    Choose the user account you want to modify.
+  </Step>
+  
+  <Step title="Update Information">
+    Modify any of the following:
+    - Username
+    - Email address
+    - Password
+    - User role (Guardia/Administrador)
+  </Step>
+  
+  <Step title="Save Changes">
+    Submit the form to update the user account. A new authentication token will be generated automatically.
+  </Step>
+</Steps>
+
+<Warning>
+Changing the email address requires the new email to be unique in the system. If the email is already registered, you'll receive an error: "El correo ya esta registrado".
+</Warning>
+
+## Logging Out
+
+To securely end your session:
+
+<Steps>
+  <Step title="Access Logout Option">
+    Click on the logout button in the navigation menu.
+  </Step>
+  
+  <Step title="Confirm Logout">
+    Your session will be terminated and authentication token cleared.
+  </Step>
+  
+  <Step title="Return to Login">
+    You'll be redirected to the login page. All session data is removed from the browser.
+  </Step>
+</Steps>
+
+<Tip>
+Always log out when using shared or public computers to protect your account.
+</Tip>
+
+## Session Management
+
+### Session Duration
+
+- **Active Session**: 24 hours from login
+- **Auto-logout**: You'll be automatically logged out after 24 hours of inactivity
+- **Token Storage**: Session tokens are stored securely in browser cookies
+
+### Security Features
+
+- **Password Encryption**: All passwords are hashed using bcrypt with salt rounds
+- **Secure Cookies**: Authentication tokens use secure, SameSite=None cookies
+- **Protected Routes**: Access to device controls and data requires valid authentication
+
+<Note>
+Your authentication token is automatically included in all API requests to secure your data access.
+</Note>
+
+## Troubleshooting
+
+### Common Issues
+
+**Cannot log in with correct credentials**
+- Clear your browser cookies and cache
+- Ensure you're using the correct email format
+- Verify CAPS LOCK is not enabled
+
+**Session expires too quickly**
+- Check your browser cookie settings
+- Ensure cookies are enabled for the ControlHub domain
+- Verify your system clock is set correctly
+
+**Email already registered error**
+- Each email can only be associated with one account
+- Use a different email address or contact an administrator to recover your account
+
+**Profile avatar not updating**
+- Verify your Gravatar account uses the same email
+- Clear browser cache to refresh the avatar image
+- Allow up to 10 minutes for Gravatar updates to propagate
+
+<Warning>
+If you forget your password, contact your system administrator for assistance. Password reset functionality may vary depending on your deployment configuration.
+</Warning>

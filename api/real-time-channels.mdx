@@ -1,0 +1,611 @@
+---
+title: 'Real-Time Data Channels'
+description: 'Complete reference for all WebSocket channels and their update intervals'
+---
+
+## Overview
+
+SAFI ControlHub broadcasts real-time telemetry data through six primary WebSocket channels. Each channel has a specific update interval and only emits when data has changed, reducing unnecessary network traffic.
+
+## Channel List
+
+<CardGroup cols={2}>
+  <Card title="nuevos-datos" icon="rocket" href="#nuevos-datos">
+    Main Xitzin-II telemetry (100ms)
+  </Card>
+  <Card title="banco-datos" icon="flask" href="#banco-datos">
+    Test bench data (500ms)
+  </Card>
+  <Card title="xitzin2-datos" icon="satellite" href="#xitzin2-datos">
+    Alternate Xitzin-II stream (200ms)
+  </Card>
+  <Card title="baterias" icon="battery-full" href="#baterias">
+    Battery status (5 seconds)
+  </Card>
+  <Card title="xitzin2-baterias" icon="battery-half" href="#xitzin2-baterias">
+    Xitzin-II batteries (5 seconds)
+  </Card>
+  <Card title="laniakea" icon="globe" href="#laniakea">
+    Laniakea system telemetry (200ms)
+  </Card>
+</CardGroup>
+
+---
+
+## nuevos-datos
+
+<div className="mb-4">
+  <Badge>100ms update interval</Badge>
+  <Badge>150 records per emission</Badge>
+</div>
+
+Main telemetry channel for the Xitzin-II rocket system.
+
+### Configuration
+
+**Source:** `src/websocket.js:76-80`
+
+```javascript
+setInterval(() => emitIfNew({
+  query: "SELECT * FROM data ORDER BY date DESC, time DESC LIMIT 150",
+  channel: "nuevos-datos",
+  getLast: (rows) => `${rows[0]?.date}-${rows[0]?.time}`,
+}), 100);
+```
+
+### Data Fields
+
+<ParamField body="date" type="string">
+  Recording date (YYYY-MM-DD)
+</ParamField>
+
+<ParamField body="time" type="string">
+  Recording time (HH:MM:SS)
+</ParamField>
+
+<ParamField body="altitude" type="number">
+  Altitude in meters
+</ParamField>
+
+<ParamField body="temperature" type="number">
+  Temperature in Celsius
+</ParamField>
+
+<ParamField body="pressure" type="number">
+  Atmospheric pressure
+</ParamField>
+
+<ParamField body="velocity" type="number">
+  Velocity in km/h
+</ParamField>
+
+<ParamField body="latitude" type="number">
+  GPS latitude coordinate
+</ParamField>
+
+<ParamField body="longitude" type="number">
+  GPS longitude coordinate
+</ParamField>
+
+<ParamField body="accel_x" type="number">
+  X-axis acceleration (m/s²)
+</ParamField>
+
+<ParamField body="accel_y" type="number">
+  Y-axis acceleration (m/s²)
+</ParamField>
+
+<ParamField body="accel_z" type="number">
+  Z-axis acceleration (m/s²)
+</ParamField>
+
+<ParamField body="mission_state" type="integer">
+  Mission phase:
+  - `0` = Preflight
+  - `1` = Lift-off
+  - `2` = Apogee
+  - `3` = Drogue
+  - `4` = Main
+  - `5` = Land
+</ParamField>
+
+<ParamField body="air_brake_angle" type="number">
+  Air brake angle in degrees
+</ParamField>
+
+### Usage Example
+
+```javascript
+import useWebsocket from '../api/useWebsocket';
+import { SOCKET_URL } from '../api/socketConfig';
+
+function TelemetryDashboard() {
+  const rawData = useWebsocket('nuevos-datos', SOCKET_URL);
+  
+  // Extract data arrays for visualization
+  const altitude = rawData.map(d => parseFloat(d.altitude) || 0);
+  const velocity = rawData.map(d => parseFloat(d.velocity) || 0);
+  const temperature = rawData.map(d => parseFloat(d.temperature) || 0);
+  
+  return (
+    <div>
+      <h2>Live Telemetry</h2>
+      <p>Records: {rawData.length}</p>
+      <p>Latest altitude: {altitude[0]} m</p>
+      <p>Latest velocity: {velocity[0]} km/h</p>
+    </div>
+  );
+}
+```
+
+---
+
+## banco-datos
+
+<div className="mb-4">
+  <Badge>500ms update interval</Badge>
+  <Badge>100 records per emission</Badge>
+</div>
+
+Static test bench data for ground testing and validation.
+
+### Configuration
+
+**Source:** `src/websocket.js:82-86`
+
+```javascript
+setInterval(() => emitIfNew({
+  query: "SELECT * FROM prueba_estatica_0 ORDER BY id DESC LIMIT 100",
+  channel: "banco-datos",
+  getLast: (rows) => rows[0]?.id,
+}), 500);
+```
+
+### Change Detection
+
+Updates are triggered by changes to the `id` field (auto-incrementing primary key).
+
+### Data Fields
+
+<ParamField body="id" type="integer">
+  Unique record identifier
+</ParamField>
+
+<ParamField body="[additional fields]" type="various">
+  Test bench specific measurements and configurations
+</ParamField>
+
+### Usage Example
+
+```javascript
+const testBenchData = useWebsocket('banco-datos', SOCKET_URL);
+
+console.log(`Test bench records: ${testBenchData.length}`);
+if (testBenchData.length > 0) {
+  console.log(`Latest test ID: ${testBenchData[0].id}`);
+}
+```
+
+---
+
+## xitzin2-datos
+
+<div className="mb-4">
+  <Badge>200ms update interval</Badge>
+  <Badge>All records</Badge>
+</div>
+
+Alternate telemetry stream for Xitzin-II system.
+
+### Configuration
+
+**Source:** `src/websocket.js:88-92`
+
+```javascript
+setInterval(() => emitIfNew({
+  query: "SELECT * FROM xitzin_2_data",
+  channel: "xitzin2-datos",
+  getLast: (rows) => JSON.stringify(rows[0]),
+}), 200);
+```
+
+<Info>
+  Unlike other channels, this emits **all records** from the table, not a limited subset.
+</Info>
+
+### Change Detection
+
+Updates are triggered by changes to the first record (serialized as JSON).
+
+### Data Fields
+
+Similar structure to `nuevos-datos` channel. Includes:
+- Telemetry data (altitude, velocity, temperature, pressure)
+- GPS coordinates (latitude, longitude)
+- Acceleration vectors (accel_x, accel_y, accel_z)
+- Mission state
+- Timestamps (date, time)
+
+### Usage Example
+
+```javascript
+const xitzin2Data = useWebsocket('xitzin2-datos', SOCKET_URL);
+
+// Process all available data
+const allAltitudes = xitzin2Data.map(d => parseFloat(d.altitude) || 0);
+const maxAltitude = Math.max(...allAltitudes);
+```
+
+---
+
+## baterias
+
+<div className="mb-4">
+  <Badge>5000ms update interval</Badge>
+  <Badge>All battery records</Badge>
+</div>
+
+Battery monitoring for the main rocket system.
+
+### Configuration
+
+**Source:** `src/websocket.js:94-98`
+
+```javascript
+setInterval(() => emitIfNew({
+  query: "SELECT * FROM battery_status",
+  channel: "baterias",
+  getLast: (rows) => JSON.stringify(rows),
+}), 5000);
+```
+
+### Change Detection
+
+Updates are triggered by changes to any battery record (all rows serialized as JSON).
+
+### Data Fields
+
+<ParamField body="battery_id" type="integer">
+  Unique battery identifier
+</ParamField>
+
+<ParamField body="battery_level" type="number">
+  Charge level percentage (0-100)
+</ParamField>
+
+<ParamField body="voltage" type="number">
+  Current voltage in volts
+</ParamField>
+
+<ParamField body="temperature" type="number">
+  Battery temperature in Celsius
+</ParamField>
+
+### Usage Example
+
+```javascript
+import { LinearProgress } from '@mui/material';
+
+function BatteryStatus() {
+  const batteryData = useWebsocket('baterias', SOCKET_URL);
+  
+  return (
+    <div>
+      {batteryData.map((battery) => (
+        <div key={battery.battery_id}>
+          <h3>Battery {battery.battery_id}</h3>
+          <LinearProgress 
+            variant="determinate" 
+            value={battery.battery_level}
+            color={battery.battery_level < 30 ? 'error' : 'success'}
+          />
+          <p>Level: {battery.battery_level}%</p>
+          <p>Voltage: {battery.voltage} V</p>
+          <p>Temp: {battery.temperature} °C</p>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+## xitzin2-baterias
+
+<div className="mb-4">
+  <Badge>5000ms update interval</Badge>
+  <Badge>All battery records</Badge>
+</div>
+
+Battery monitoring for Xitzin-II alternate system.
+
+### Configuration
+
+**Source:** `src/websocket.js:100-104`
+
+```javascript
+setInterval(() => emitIfNew({
+  query: "SELECT * FROM xitzin_2_batteries",
+  channel: "xitzin2-baterias",
+  getLast: (rows) => JSON.stringify(rows),
+}), 5000);
+```
+
+### Data Fields
+
+Identical structure to `baterias` channel:
+- `battery_id`
+- `battery_level`
+- `voltage`
+- `temperature`
+
+### Usage Example
+
+```javascript
+const x2Batteries = useWebsocket('xitzin2-baterias', SOCKET_URL);
+
+// Find critical batteries
+const criticalBatteries = x2Batteries.filter(
+  battery => battery.battery_level < 20
+);
+
+if (criticalBatteries.length > 0) {
+  console.warn('Low battery warning!', criticalBatteries);
+}
+```
+
+---
+
+## laniakea
+
+<div className="mb-4">
+  <Badge>200ms update interval</Badge>
+  <Badge>100 records per emission</Badge>
+</div>
+
+Telemetry data from the Laniakea rocket system.
+
+### Configuration
+
+**Source:** `src/websocket.js:106-110`
+
+```javascript
+setInterval(() => emitIfNew({
+  query: "SELECT * FROM datos_laniakea ORDER BY date DESC, time DESC LIMIT 100",
+  channel: "laniakea",
+  getLast: (rows) => JSON.stringify(rows),
+}), 200);
+```
+
+### Data Fields
+
+<ParamField body="date" type="string">
+  Recording date
+</ParamField>
+
+<ParamField body="time" type="string">
+  Recording time
+</ParamField>
+
+<ParamField body="latitud" type="number">
+  GPS latitude coordinate
+</ParamField>
+
+<ParamField body="longitud" type="number">
+  GPS longitude coordinate
+</ParamField>
+
+<ParamField body="altitud" type="number">
+  Altitude in meters
+</ParamField>
+
+<ParamField body="aceleracion" type="number">
+  Total acceleration magnitude (m/s²)
+</ParamField>
+
+<ParamField body="accel_x" type="number">
+  X-axis acceleration (m/s²)
+</ParamField>
+
+<ParamField body="accel_y" type="number">
+  Y-axis acceleration (m/s²)
+</ParamField>
+
+<ParamField body="accel_z" type="number">
+  Z-axis acceleration (m/s²)
+</ParamField>
+
+<ParamField body="conops" type="string">
+  CONOPS (Concept of Operations) state
+</ParamField>
+
+<ParamField body="voltaje" type="number">
+  System voltage in volts
+</ParamField>
+
+<ParamField body="corriente" type="number">
+  System current in amperes
+</ParamField>
+
+### Usage Example
+
+```javascript
+import useWebsocket from '../api/useWebsocket';
+import { SOCKET_URL } from '../api/socketConfig';
+
+function LaniakeaDashboard() {
+  const rawData = useWebsocket('laniakea', SOCKET_URL);
+  
+  const data = {
+    altitud: rawData.map(d => parseFloat(d.altitud) || 0),
+    aceleracion: rawData.map(d => parseFloat(d.aceleracion) || 0),
+    voltaje: rawData.map(d => parseFloat(d.voltaje) || 0),
+    corriente: rawData.map(d => parseFloat(d.corriente) || 0),
+  };
+  
+  const latest = rawData.length > 0 ? rawData[0] : null;
+  
+  return (
+    <div>
+      <h2>Laniakea System</h2>
+      {latest && (
+        <>
+          <p>Altitude: {parseFloat(latest.altitud) || 0} m</p>
+          <p>Acceleration: {parseFloat(latest.aceleracion) || 0} m/s²</p>
+          <p>Voltage: {parseFloat(latest.voltaje) || 0} V</p>
+          <p>Current: {parseFloat(latest.corriente) || 0} A</p>
+          <p>CONOPS: {latest.conops || 'N/A'}</p>
+        </>
+      )}
+    </div>
+  );
+}
+```
+
+---
+
+## Update Interval Summary
+
+<table>
+  <thead>
+    <tr>
+      <th>Channel</th>
+      <th>Interval</th>
+      <th>Record Limit</th>
+      <th>Change Detection</th>
+    </tr>
+  </thead>
+  <tbody>
+    <tr>
+      <td><code>nuevos-datos</code></td>
+      <td>100ms</td>
+      <td>150 records</td>
+      <td>date + time</td>
+    </tr>
+    <tr>
+      <td><code>banco-datos</code></td>
+      <td>500ms</td>
+      <td>100 records</td>
+      <td>id field</td>
+    </tr>
+    <tr>
+      <td><code>xitzin2-datos</code></td>
+      <td>200ms</td>
+      <td>All records</td>
+      <td>First record (JSON)</td>
+    </tr>
+    <tr>
+      <td><code>baterias</code></td>
+      <td>5000ms</td>
+      <td>All records</td>
+      <td>All rows (JSON)</td>
+    </tr>
+    <tr>
+      <td><code>xitzin2-baterias</code></td>
+      <td>5000ms</td>
+      <td>All records</td>
+      <td>All rows (JSON)</td>
+    </tr>
+    <tr>
+      <td><code>laniakea</code></td>
+      <td>200ms</td>
+      <td>100 records</td>
+      <td>All rows (JSON)</td>
+    </tr>
+  </tbody>
+</table>
+
+---
+
+## Performance Considerations
+
+<AccordionGroup>
+  <Accordion title="Intelligent Change Detection">
+    The server uses timestamp-based change detection to avoid emitting duplicate data:
+    
+    **Source:** `src/websocket.js:64-74`
+    
+    ```javascript
+    const emitIfNew = async ({ query, channel, getLast }) => {
+      const { rows } = await pool.query(query);
+      if (rows.length === 0) return;
+
+      const newTimestamp = getLast(rows);
+      if (newTimestamp !== lastTimestamps[channel]) {
+        io.emit(channel, rows);
+        lastTimestamps[channel] = newTimestamp;
+      }
+    };
+    ```
+    
+    This ensures updates are only broadcast when data actually changes.
+  </Accordion>
+
+  <Accordion title="Optimized Update Intervals">
+    Channels are configured with different intervals based on data volatility:
+    
+    - **High-frequency telemetry** (100-200ms): `nuevos-datos`, `xitzin2-datos`, `laniakea`
+    - **Medium-frequency data** (500ms): `banco-datos`
+    - **Low-frequency status** (5000ms): `baterias`, `xitzin2-baterias`
+  </Accordion>
+
+  <Accordion title="Record Limiting">
+    Most channels limit the number of records to prevent excessive data transfer:
+    
+    - `nuevos-datos`: Last 150 records
+    - `banco-datos`: Last 100 records
+    - `laniakea`: Last 100 records
+    - `xitzin2-datos`: All records (use cautiously)
+  </Accordion>
+
+  <Accordion title="Client-Side Recommendations">
+    - Always validate and parse incoming data
+    - Use the `useWebsocket` hook for automatic lifecycle management
+    - Implement error boundaries for data display components
+    - Consider throttling UI updates for high-frequency channels
+  </Accordion>
+</AccordionGroup>
+
+---
+
+## Multiple Channel Subscription
+
+```javascript
+import useWebsocket from '../api/useWebsocket';
+import { SOCKET_URL } from '../api/socketConfig';
+
+function MultiChannelDashboard() {
+  // Subscribe to multiple channels simultaneously
+  const xitzinData = useWebsocket('nuevos-datos', SOCKET_URL);
+  const laniakeaData = useWebsocket('laniakea', SOCKET_URL);
+  const batteryData = useWebsocket('baterias', SOCKET_URL);
+  
+  return (
+    <div>
+      <h2>Multi-System Dashboard</h2>
+      
+      <section>
+        <h3>Xitzin-II</h3>
+        <p>Records: {xitzinData.length}</p>
+        {xitzinData.length > 0 && (
+          <p>Altitude: {parseFloat(xitzinData[0].altitude) || 0} m</p>
+        )}
+      </section>
+      
+      <section>
+        <h3>Laniakea</h3>
+        <p>Records: {laniakeaData.length}</p>
+        {laniakeaData.length > 0 && (
+          <p>Altitude: {parseFloat(laniakeaData[0].altitud) || 0} m</p>
+        )}
+      </section>
+      
+      <section>
+        <h3>Battery Status</h3>
+        <p>Batteries monitored: {batteryData.length}</p>
+      </section>
+    </div>
+  );
+}
+```

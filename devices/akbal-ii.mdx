@@ -1,0 +1,177 @@
+---
+title: AKBAL-II Rocket System
+description: Live telemetry monitoring for the AKBAL-II rocket with 3D visualization
+---
+
+AKBAL-II is a rocket system with real-time telemetry monitoring, 3D rocket orientation visualization, and mission phase tracking.
+
+## Overview
+
+The AKBAL-II dashboard (`frontend/src/pages/Dashboard.jsx`) provides a SpaceX-inspired interface for monitoring rocket flights:
+
+- Live video/image feeds
+- 3D rocket model with orientation visualization
+- Real-time telemetry charts
+- GPS tracking with live map updates
+- Barometric altitude gauge
+- Battery status monitoring
+
+## Data Streams
+
+### Primary Telemetry Channel: `nuevos-datos`
+
+**WebSocket Channel:** `nuevos-datos`  
+**Update Rate:** 100ms  
+**Database Table:** `data`  
+**Endpoint:** `GET/POST /api/data`
+
+<Accordion title="Telemetry Data Fields">
+
+| Field | Type | Description | Units |
+|-------|------|-------------|-------|
+| `date` | string | Data timestamp date | - |
+| `time` | string | Data timestamp time | - |
+| `altitude` | float | Barometric altitude | meters |
+| `temperature` | float | Ambient temperature | °C |
+| `pressure` | float | Atmospheric pressure | Pa |
+| `velocity` | float | Ground speed | km/h |
+| `latitude` | float | GPS latitude | decimal degrees |
+| `longitude` | float | GPS longitude | decimal degrees |
+| `accel_x` | float | X-axis acceleration | m/s² |
+| `accel_y` | float | Y-axis acceleration | m/s² |
+| `accel_z` | float | Z-axis acceleration | m/s² |
+| `mission_state` | integer | Current flight phase (0-5) | - |
+| `air_brake_angle` | float | Air brake deployment angle | degrees |
+
+</Accordion>
+
+### Battery Monitoring Channel: `baterias`
+
+**WebSocket Channel:** `baterias`  
+**Update Rate:** 5 seconds  
+**Database Table:** `battery_status`  
+**Endpoint:** `GET/POST /api/batteries`
+
+## Mission States
+
+The `mission_state` field tracks the rocket's flight phase:
+
+| State | Index | Description |
+|-------|-------|-------------|
+| **Preflight** | 0 | Pre-launch initialization |
+| **Lift-off** | 1 | Motor ignition and launch |
+| **Apogee** | 2 | Maximum altitude reached |
+| **Drogue** | 3 | Drogue parachute deployed |
+| **Main** | 4 | Main parachute deployed |
+| **Land** | 5 | Touchdown complete |
+
+## Dashboard Features
+
+### Left Column: Flight Phases & Real-Time Data
+
+<CardGroup cols={2}>
+  <Card title="Flight Phases Table" icon="list">
+    Shows all 6 mission states with active phase highlighting
+  </Card>
+  
+  <Card title="Real-Time Metrics" icon="gauge">
+    - Latitude/Longitude
+    - Velocity (km/h)
+    - Altitude (m)
+    - Temperature (°C)
+    - Pressure
+    - Current CONOPS state
+  </Card>
+</CardGroup>
+
+### Center Column: Live Feed
+
+Supports multiple feed types with toggle button:
+- YouTube live stream
+- Static standby image
+
+```javascript
+const feedOptions = [
+  { url: 'https://www.youtube.com/watch?v=-LKTt2XGn3o', type: 'video' },
+  { url: 'https://www.youtube.com/watch?v=-LKTt2XGn3o', type: 'video' },
+  { url: 'src/assets/standby.jpg', type: 'image' },
+];
+```
+
+### Right Column: Visualization Components
+
+<Accordion title="Barometric Altitude Chart">
+
+**Type:** D3.js vertical gauge  
+**Features:**
+- Real-time altitude display
+- ±100m dynamic range window
+- Major ticks every 10m
+- Minor ticks every 2m
+- Simulated ascent/descent animation
+
+**Location:** `frontend/src/pages/Dashboard.jsx:218-314`
+
+</Accordion>
+
+<Accordion title="3D Rocket Orientation">
+
+**Technology:** Three.js with GLTF model  
+**Model:** ANSYS rocket model (`src/assets/akbal/modeloansys.gltf`)  
+**Features:**
+- Real-time orientation based on acceleration data
+- Animated pitch/roll using sinusoidal motion
+- DRACO compression support
+
+**Rotation Logic:**
+```javascript
+modelRef.current.rotation.x = Math.sin(timeRef.current * 0.06) * 0.2;
+modelRef.current.rotation.z = Math.cos(timeRef.current * 0.06) * 0.2;
+```
+
+**Location:** `frontend/src/pages/Dashboard.jsx:69-129`
+
+</Accordion>
+
+<Accordion title="GPS Map View">
+
+**Library:** React Leaflet with OpenStreetMap  
+**Zoom Level:** 22  
+**Features:**
+- Auto-centering on latest coordinates
+- Marker with coordinate popup
+- Dynamic map updates
+
+</Accordion>
+
+## Simulated Flight Animation
+
+The dashboard includes a simulation mode for testing:
+
+```javascript
+// 20s ascent to 3000m, 2s pause, 20s descent
+const durationUp = 20000;
+const pause = 2000;
+const durationDown = 20000;
+```
+
+Triggered by "Iniciar Simulación" button.
+
+## Data Subscription
+
+The dashboard uses WebSocket for real-time updates:
+
+```javascript
+// frontend/src/pages/Dashboard.jsx:155
+const rawData = useWebsocket('nuevos-datos', SOCKET_URL);
+```
+
+Data is processed and mapped to state arrays in `useEffect` hook (lines 157-188).
+
+## Source Code References
+
+- **Frontend Dashboard:** `frontend/src/pages/Dashboard.jsx`
+- **API Routes:** `src/routes/data.routes.js:9-17`
+- **WebSocket Handler:** `src/websocket.js:76-80`
+- **Database Table:** `data`
+- **3D Model:** `frontend/src/assets/akbal/modeloansys.gltf`

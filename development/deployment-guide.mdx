@@ -1,0 +1,480 @@
+---
+title: 'Deployment Guide'
+description: 'Deploy SAFI ControlHub backend and frontend to production'
+---
+
+## Overview
+
+SAFI ControlHub is a full-stack application with a Node.js/Express backend and React/Vite frontend. The backend handles REST API requests, WebSocket connections for real-time data, and serial port communication for sensor data.
+
+## Architecture Components
+
+- **Backend**: Express server with Socket.IO for WebSockets (port 3000)
+- **Frontend**: React SPA built with Vite (served on configurable port)
+- **Database**: PostgreSQL with connection pooling
+- **Real-time**: WebSocket polling for data tables every 100-5000ms
+- **Serial**: USB serial port reader for sensor data ingestion
+
+<Warning>
+  The application uses hardcoded CORS origins in `src/app.js:17-25`. You **must** update the `allowedOrigins` array with your production domain before deployment.
+</Warning>
+
+---
+
+## Prerequisites
+
+Before deploying, ensure you have:
+
+- Node.js 16+ installed
+- PostgreSQL 12+ running and accessible
+- Production domain/IP address configured in DNS
+- SSL certificate (recommended for production)
+- Access to serial port device (if using sensor features)
+
+---
+
+## Database Setup
+
+<Steps>
+  <Step title="Create PostgreSQL Database">
+    Connect to your PostgreSQL server and create the database:
+    
+    ```sql
+    CREATE DATABASE rocket_data;
+    ```
+  </Step>
+
+  <Step title="Run Database Migrations">
+    Execute the initialization script to create tables:
+    
+    ```bash
+    psql -U postgres -d rocket_data -f database/init.sql
+    ```
+    
+    This creates:
+    - `users` table with authentication fields
+    - `task` table with user relationships
+    
+    <Note>
+      The init.sql includes an ALTER statement that requires the `users` table to exist first. The script handles this with proper ordering.
+    </Note>
+  </Step>
+
+  <Step title="Create Additional Data Tables">
+    Based on the WebSocket implementation (`src/websocket.js`), create these tables for real-time data:
+    
+    ```sql
+    CREATE TABLE data (
+      id SERIAL PRIMARY KEY,
+      date DATE NOT NULL,
+      time TIME NOT NULL,
+      -- Add your sensor columns here
+    );
+
+    CREATE TABLE prueba_estatica_0 (
+      id SERIAL PRIMARY KEY,
+      -- Add test bench columns
+    );
+
+    CREATE TABLE xitzin_2_data (
+      id SERIAL PRIMARY KEY,
+      -- Add Xitzin 2 telemetry columns
+    );
+
+    CREATE TABLE battery_status (
+      id SERIAL PRIMARY KEY,
+      -- Add battery monitoring columns
+    );
+
+    CREATE TABLE xitzin_2_batteries (
+      id SERIAL PRIMARY KEY,
+      -- Add Xitzin 2 battery columns
+    );
+
+    CREATE TABLE datos_laniakea (
+      id SERIAL PRIMARY KEY,
+      date DATE NOT NULL,
+      time TIME NOT NULL,
+      -- Add Laniakea telemetry columns
+    );
+    ```
+    
+    <Note>
+      Customize these schemas based on your actual sensor data structure. The WebSocket implementation queries these tables at different intervals (100ms to 5000ms).
+    </Note>
+  </Step>
+
+  <Step title="Verify Database Connection">
+    Test the connection using the API ping endpoint after deployment:
+    
+    ```bash
+    curl http://your-domain:3000/api/ping
+    ```
+    
+    Should return the current database timestamp.
+  </Step>
+</Steps>
+
+---
+
+## Backend Deployment
+
+<Steps>
+  <Step title="Clone and Install Dependencies">
+    ```bash
+    git clone <repository-url>
+    cd source
+    npm install
+    ```
+  </Step>
+
+  <Step title="Configure Environment Variables">
+    Create a `.env` file in the `source/` directory:
+    
+    ```bash
+    # Server Configuration
+    PORT=3000
+
+    # PostgreSQL Configuration (from src/config.js)
+    PG_HOST=your-postgres-host
+    PG_PORT=5432
+    PG_USER=postgres
+    PG_PASSWORD=your-secure-password
+    PG_DATABASE=rocket_data
+
+    # CORS Origin (legacy - also update src/app.js)
+    ORIGIN=https://your-frontend-domain.com
+    ```
+    
+    <Warning>
+      Never commit `.env` files to version control. The default password in `src/config.js` is `admin@123` - change this immediately for production.
+    </Warning>
+  </Step>
+
+  <Step title="Update CORS Configuration">
+    Edit `src/app.js` lines 17-25 to include your production origins:
+    
+    ```javascript
+    const allowedOrigins = [
+      'https://your-production-domain.com',
+      'https://www.your-production-domain.com',
+      // Add any other trusted origins
+    ];
+    ```
+    
+    The current configuration only allows local development IPs. **This must be updated for production.**
+  </Step>
+
+  <Step title="Build and Start Backend">
+    The backend uses ES modules (`"type": "module"` in package.json). Start with:
+    
+    ```bash
+    npm start
+    ```
+    
+    This runs: `node .` which executes `src/index.js`
+    
+    <Note>
+      For development with auto-reload, use `npm run dev` which runs `nodemon .`
+    </Note>
+  </Step>
+
+  <Step title="Configure Process Manager">
+    For production, use PM2 to manage the Node.js process:
+    
+    ```bash
+    npm install -g pm2
+    pm2 start src/index.js --name safi-controlhub
+    pm2 save
+    pm2 startup
+    ```
+    
+    This ensures the server:
+    - Restarts on crashes
+    - Starts on system boot
+    - Provides log management
+  </Step>
+
+  <Step title="Verify Backend Services">
+    Check that all services are running:
+    
+    ```bash
+    # HTTP Server
+    curl http://localhost:3000/
+    # Should return: {"message":"welcome to my API"}
+
+    # WebSocket Server
+    # Connect to ws://localhost:3000 - should accept connections
+
+    # Database Connection
+    curl http://localhost:3000/api/ping
+    # Should return current timestamp
+    ```
+  </Step>
+</Steps>
+
+<Warning>
+  The serial port reader (`src/SerialReader.js`) is configured for `/dev/ttyUSB0` at 9600 baud. If deploying without serial hardware, comment out the serial reader import in `src/app.js:76` to prevent startup errors.
+</Warning>
+
+---
+
+## Frontend Deployment
+
+<Steps>
+  <Step title="Install Frontend Dependencies">
+    ```bash
+    cd frontend
+    npm install
+    ```
+  </Step>
+
+  <Step title="Configure API Endpoint">
+    Update the API base URL in your frontend code to point to your production backend:
+    
+    - Check for `axios` base URL configuration
+    - Update WebSocket connection URLs to production domain
+    - Ensure Socket.IO client connects to `https://your-backend-domain.com`
+  </Step>
+
+  <Step title="Build Frontend for Production">
+    Run the production build command from `frontend/package.json:8`:
+    
+    ```bash
+    npm run build
+    ```
+    
+    This executes: `vite build`
+    
+    Output is written to `frontend/dist/` directory with:
+    - Minified JavaScript bundles
+    - Optimized CSS
+    - Tree-shaken dependencies
+    - Asset hashing for cache busting
+  </Step>
+
+  <Step title="Option 1: Serve with Built-in Server">
+    Use the `serve` package (already in dependencies):
+    
+    ```bash
+    # From frontend/ directory
+    PORT=80 npm start
+    ```
+    
+    This runs: `serve dist -p $PORT` (from package.json:10)
+    
+    <Note>
+      This is suitable for small deployments but not recommended for high-traffic production. Use Nginx or Apache for better performance.
+    </Note>
+  </Step>
+
+  <Step title="Option 2: Deploy with Nginx (Recommended)">
+    Configure Nginx to serve the static build:
+    
+    ```nginx
+    server {
+      listen 80;
+      server_name your-domain.com;
+      
+      root /path/to/source/frontend/dist;
+      index index.html;
+      
+      # Handle client-side routing
+      location / {
+        try_files $uri $uri/ /index.html;
+      }
+      
+      # Cache static assets
+      location ~* \.(js|css|png|jpg|jpeg|gif|ico|svg|woff|woff2)$ {
+        expires 1y;
+        add_header Cache-Control "public, immutable";
+      }
+      
+      # Security headers
+      add_header X-Frame-Options "SAMEORIGIN" always;
+      add_header X-Content-Type-Options "nosniff" always;
+      add_header X-XSS-Protection "1; mode=block" always;
+    }
+    ```
+  </Step>
+
+  <Step title="Enable SSL/HTTPS">
+    Configure SSL certificate (using Let's Encrypt):
+    
+    ```bash
+    sudo certbot --nginx -d your-domain.com
+    ```
+    
+    Update Nginx configuration:
+    
+    ```nginx
+    server {
+      listen 443 ssl http2;
+      server_name your-domain.com;
+      
+      ssl_certificate /etc/letsencrypt/live/your-domain.com/fullchain.pem;
+      ssl_certificate_key /etc/letsencrypt/live/your-domain.com/privkey.pem;
+      
+      # ... rest of configuration
+    }
+    ```
+    
+    <Warning>
+      WebSocket connections require SSL in production. Update Socket.IO connections to use `wss://` instead of `ws://`.
+    </Warning>
+  </Step>
+</Steps>
+
+---
+
+## Reverse Proxy for Backend
+
+<Note>
+  Configure Nginx as a reverse proxy for the Node.js backend to enable SSL and better performance.
+</Note>
+
+```nginx
+server {
+  listen 443 ssl http2;
+  server_name api.your-domain.com;
+  
+  ssl_certificate /etc/letsencrypt/live/api.your-domain.com/fullchain.pem;
+  ssl_certificate_key /etc/letsencrypt/live/api.your-domain.com/privkey.pem;
+  
+  # Proxy to Node.js backend
+  location / {
+    proxy_pass http://localhost:3000;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection 'upgrade';
+    proxy_set_header Host $host;
+    proxy_set_header X-Real-IP $remote_addr;
+    proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+    proxy_set_header X-Forwarded-Proto $scheme;
+    proxy_cache_bypass $http_upgrade;
+  }
+  
+  # WebSocket support
+  location /socket.io/ {
+    proxy_pass http://localhost:3000/socket.io/;
+    proxy_http_version 1.1;
+    proxy_set_header Upgrade $http_upgrade;
+    proxy_set_header Connection "upgrade";
+    proxy_set_header Host $host;
+    proxy_cache_bypass $http_upgrade;
+  }
+}
+```
+
+---
+
+## Post-Deployment Verification
+
+<Steps>
+  <Step title="Test API Endpoints">
+    ```bash
+    # Root endpoint
+    curl https://api.your-domain.com/
+    
+    # Database ping
+    curl https://api.your-domain.com/api/ping
+    
+    # Check CORS (from browser console on your frontend domain)
+    fetch('https://api.your-domain.com/api/ping', { credentials: 'include' })
+    ```
+  </Step>
+
+  <Step title="Test WebSocket Connection">
+    Open browser console on your frontend and verify Socket.IO connection:
+    
+    ```javascript
+    // Should show connected socket ID in logs
+    // Check Network tab for successful WebSocket upgrade
+    ```
+  </Step>
+
+  <Step title="Monitor Real-time Data Flow">
+    Verify WebSocket channels are emitting data (from `src/websocket.js`):
+    - `nuevos-datos` (every 100ms)
+    - `banco-datos` (every 500ms)
+    - `xitzin2-datos` (every 200ms)
+    - `baterias` (every 5000ms)
+    - `xitzin2-baterias` (every 5000ms)
+    - `laniakea` (every 200ms)
+  </Step>
+
+  <Step title="Check Logs">
+    ```bash
+    # PM2 logs
+    pm2 logs safi-controlhub
+    
+    # Should show:
+    # - "Database connected"
+    # - "Servidor HTTP + WS corriendo en puerto 3000"
+    # - WebSocket connection events
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Deployment Checklist
+
+- [ ] PostgreSQL database created and migrated
+- [ ] Environment variables configured in `.env`
+- [ ] CORS origins updated in `src/app.js`
+- [ ] Default database password changed
+- [ ] Frontend built with `npm run build`
+- [ ] Backend running with PM2
+- [ ] Nginx configured with SSL
+- [ ] WebSocket connections working over WSS
+- [ ] API endpoints accessible from frontend
+- [ ] Real-time data channels emitting
+- [ ] Serial port configuration adjusted (if needed)
+- [ ] Monitoring and logging configured
+- [ ] Backup strategy implemented for database
+
+---
+
+## Rollback Procedure
+
+If deployment fails:
+
+<Steps>
+  <Step title="Stop Services">
+    ```bash
+    pm2 stop safi-controlhub
+    ```
+  </Step>
+
+  <Step title="Restore Previous Version">
+    ```bash
+    git checkout <previous-version-tag>
+    npm install
+    cd frontend && npm install && npm run build
+    ```
+  </Step>
+
+  <Step title="Restart Services">
+    ```bash
+    pm2 restart safi-controlhub
+    ```
+  </Step>
+
+  <Step title="Database Rollback (if needed)">
+    ```bash
+    # Restore from backup
+    psql -U postgres -d rocket_data < backup.sql
+    ```
+  </Step>
+</Steps>
+
+---
+
+## Next Steps
+
+- Configure [production settings](/development/production-config) for optimization
+- Set up monitoring and alerting
+- Implement automated backups
+- Configure log rotation
+- Set up CI/CD pipeline for automated deployments

@@ -1,0 +1,443 @@
+---
+title: 'Data Visualization'
+description: 'Explore interactive charts, 3D models, and maps for comprehensive mission monitoring'
+icon: 'chart-line'
+---
+
+## Overview
+
+SAFI ControlHub provides advanced visualization tools to transform raw telemetry into actionable insights. From real-time charts to interactive 3D models and GPS tracking, every visualization is designed for clarity during critical operations.
+
+<CardGroup cols={3}>
+  <Card title="D3.js Charts" icon="chart-area">
+    Smooth, responsive line charts for all telemetry parameters
+  </Card>
+  <Card title="3D Models" icon="cube">
+    Real-time rocket orientation visualization with Three.js
+  </Card>
+  <Card title="Interactive Maps" icon="map">
+    GPS tracking with OpenStreetMap integration
+  </Card>
+</CardGroup>
+
+## Chart Visualizations
+
+All telemetry dashboards use D3.js for high-performance, customizable charting.
+
+### Chart Types
+
+<Accordion title="Time-Series Line Charts">
+  
+  **Used For**: Altitude, velocity, pressure, temperature, force
+  
+  **Features**:
+  - Smooth line rendering with D3.js path interpolation
+  - Automatic axis scaling based on data range
+  - Real-time updates without flickering
+  - Responsive sizing for different screen sizes
+  - Color-coded by parameter type
+  
+  **Technical Details**:
+  - **Library**: D3.js v7+
+  - **X-axis**: Time or data point index
+  - **Y-axis**: Parameter value with domain from 0 to max(data)
+  - **Line Width**: 3px for visibility
+  - **Animation**: None (instant updates for real-time responsiveness)
+  
+  <Info>
+    Line charts update by removing the previous SVG and redrawing completely, ensuring no memory leaks during long monitoring sessions.
+  </Info>
+
+</Accordion>
+
+<Accordion title="Barometric Altitude Gauge">
+  
+  **Used For**: Live View Dashboard altitude display
+  
+  **Features**:
+  - Vertical gauge with graduated scale
+  - Moving pointer tracks current altitude
+  - Major ticks every 10 meters
+  - Minor ticks every 2 meters
+  - Dynamic range centered on current altitude ±100m
+  - Cyan pointer triangle for visibility
+  - Numeric altitude box at pointer position
+  
+  **Implementation**:
+  ```javascript
+  // Scale adjusts to show altitude ± 100m range
+  const y = d3.scaleLinear()
+    .domain([minA, maxA])  // Current altitude ± 100m
+    .range([height, 0]);
+  
+  // Pointer drawn as SVG polygon
+  svg.append('polygon')
+    .attr('points', `${width-30},${pointerY-10} ${width},${pointerY} ${width-30},${pointerY+10}`)
+    .attr('fill', '#61DAFB');
+  ```
+  
+  <Tip>
+    The altitude gauge automatically rescales as the rocket climbs, always keeping the current altitude centered for easy reading.
+  </Tip>
+
+</Accordion>
+
+### Chart Styling
+
+All charts follow consistent styling for professional, mission-control aesthetics:
+
+**Color Palette**:
+- **Altitude**: Cyan (`#61DAFB`)
+- **Velocity**: Cyan (`#61DAFB`)
+- **Temperature**: Green (`#50C878`) on Test Bench, Cyan on Live dashboards
+- **Pressure**: Orange (`#FFB74D`) on Test Bench, Cyan on Live dashboards
+- **Force**: Cyan (`#61DAFB`)
+- **Axes**: White for labels and tick marks
+- **Background**: Transparent (inherits card dark blue)
+
+**Typography**:
+- **Chart Titles**: 26px bold white text, centered above chart
+- **Axis Labels**: 14px white text
+- **Tick Labels**: Proportional to chart size
+
+**Layout**:
+- **Margins**: Top: 35-40px, Right: 5-60px, Bottom: 15-18px, Left: 40-60px
+- **Responsive Width**: Adapts to card container (300px mobile, 400-670px desktop)
+- **Height**: Fixed at 300-400px for consistency
+
+### Chart Performance
+
+Optimizations ensure smooth operation during extended missions:
+
+- **Selective Redrawing**: Charts only update when data array changes
+- **Element Removal**: Previous SVG cleared before each redraw using `d3.select(container).selectAll('*').remove()`
+- **Data Windowing**: Only last 100-150 points rendered, older data discarded
+- **Request Batching**: Multiple chart updates triggered by single state change
+
+<Note>
+  On typical hardware, D3.js charts render in under 16ms, maintaining 60fps even during rapid telemetry updates.
+</Note>
+
+## 3D Visualization
+
+The Live View Dashboard features real-time 3D rocket orientation visualization.
+
+### Rocket Model Display
+
+**Technology**: Three.js WebGL rendering
+
+**Model Format**: GLTF with Draco compression
+
+**Visual Features**:
+- Realistic 3D rocket model loaded from `src/assets/akbal/modeloansys.gltf`
+- Smooth rotation animations based on flight dynamics
+- Professional lighting with directional and ambient sources
+- Transparent background blending with dashboard theme
+
+### Orientation Simulation
+
+The rocket model animates to show orientation changes:
+
+```javascript
+// Pitch and roll simulation based on time
+modelRef.current.rotation.x = Math.sin(timeRef.current * 0.06) * 0.2;
+modelRef.current.rotation.z = Math.cos(timeRef.current * 0.06) * 0.2;
+```
+
+**Animation Characteristics**:
+- **Update Rate**: Every animation frame (~60fps)
+- **Pitch Range**: ±0.2 radians (~11.5 degrees)
+- **Roll Range**: ±0.2 radians (~11.5 degrees)
+- **Rotation Speed**: Sinusoidal with 0.06 time coefficient
+
+<Info>
+  In future versions, this animation will be driven by actual accelerometer data (`accel_x`, `accel_y`, `accel_z`) from telemetry rather than simulated motion.
+</Info>
+
+### 3D Scene Setup
+
+<Accordion title="Camera Configuration">
+  
+  **Type**: PerspectiveCamera
+  
+  **Parameters**:
+  - FOV: 60 degrees
+  - Aspect Ratio: 1:1 (square viewport)
+  - Near Plane: 0.1 units
+  - Far Plane: 1000 units
+  - Position: (0, 0, 15) - looking down Z-axis
+  
+  **Purpose**: Wide enough field of view to see entire rocket while maintaining perspective depth.
+
+</Accordion>
+
+<Accordion title="Lighting Setup">
+  
+  **Directional Light**:
+  - Color: White (0xffffff)
+  - Intensity: 1.0
+  - Position: (10, 10, 10) - top-right-front
+  
+  **Ambient Light**:
+  - Color: Gray (0x404040)
+  - Purpose: Softly illuminate shadowed areas
+  
+  Combined lighting creates depth perception while preventing harsh shadows.
+
+</Accordion>
+
+<Accordion title="Model Loading">
+  
+  **Loader**: GLTFLoader with DRACOLoader
+  
+  **Draco Decoder**: Loaded from CDN for compressed model support
+  
+  **Transformations**:
+  - Scale: 7x in all dimensions
+  - Position: (-4, -centerY * 8, -6) for optimal framing
+  
+  **Error Handling**: Failed loads logged to console without crashing UI
+
+</Accordion>
+
+### Rendering Performance
+
+- **Renderer**: WebGLRenderer with alpha transparency
+- **Canvas Size**: 300px × 455px
+- **Frame Rate**: 60fps native, no throttling
+- **Memory Management**: Proper cleanup on component unmount
+
+<Warning>
+  The 3D model requires WebGL support. Older browsers or devices without GPU acceleration may experience performance issues or fail to render.
+</Warning>
+
+## Map Visualization
+
+Both Live View and Live Telemetry dashboards include GPS tracking with interactive maps.
+
+### Map Features
+
+<CardGroup cols={2}>
+  <Card title="OpenStreetMap" icon="earth-americas">
+    Free, detailed base maps with global coverage
+  </Card>
+  <Card title="Auto-Centering" icon="location-crosshairs">
+    Map follows rocket position in real-time
+  </Card>
+  <Card title="Position Marker" icon="location-dot">
+    Clear visual indicator of current GPS coordinates
+  </Card>
+  <Card title="Coordinate Popup" icon="message">
+    Click marker to see exact latitude/longitude
+  </Card>
+</CardGroup>
+
+### Map Implementation
+
+**Library**: React Leaflet (Leaflet.js wrapper)
+
+**Configuration**:
+```javascript
+<MapContainer 
+  center={coordinates}     // [latitude, longitude]
+  zoom={22}                // Maximum detail level
+  style={{ height: '100%', width: '100%' }}
+>
+  <TileLayer
+    url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+    attribution="© OpenStreetMap contributors"
+  />
+  <Marker position={coordinates}>
+    <Popup>{coordinates[0]}, {coordinates[1]}</Popup>
+  </Marker>
+  <MapUpdater coordinates={coordinates} />
+</MapContainer>
+```
+
+### Auto-Centering Logic
+
+The `MapUpdater` component ensures the map always shows the rocket:
+
+```javascript
+const MapUpdater = ({ coordinates }) => {
+  const map = useMap();
+  useEffect(() => {
+    map.setView(coordinates, map.getZoom());
+  }, [coordinates, map]);
+  return null;
+};
+```
+
+**Behavior**:
+- Watches `coordinates` prop for changes
+- Updates map center when GPS position changes
+- Maintains current zoom level during panning
+- Smooth transitions between positions
+
+<Tip>
+  Zoom level 22 provides street-level detail. For high-altitude flights, consider implementing dynamic zoom that adjusts based on altitude for better context.
+</Tip>
+
+### GPS Coordinate Sources
+
+Maps display position from the `nuevos-datos` WebSocket channel:
+
+- **Field**: `latitude`, `longitude`
+- **Format**: Decimal degrees (e.g., 19.2847, -99.6519)
+- **Update Rate**: Every 100ms with new telemetry
+- **Precision**: Limited by GPS hardware accuracy
+
+**Coordinate Processing**:
+```javascript
+const latestLat = latitude[0] || 0;  // Most recent value
+const latestLon = longitude[0] || 0;
+setCoordinates([latestLat, latestLon]);
+```
+
+<Info>
+  Coordinates default to `[0, 0]` (null island off Africa) if no GPS data received. This indicates a telemetry connectivity issue.
+</Info>
+
+### Map Dimensions
+
+**Live View Dashboard**:
+- Height: 300px
+- Width: 100% of card container
+- Position: Bottom of right column
+
+**Live Telemetry Dashboard**:
+- Height: 250px
+- Width: 100% of card container
+- Position: Top of left column
+
+## Multi-Panel Layouts
+
+Dashboards use Material-UI Grid system for responsive, organized layouts.
+
+### Grid Breakpoints
+
+**Material-UI Responsive Sizes**:
+- `xs={12}` - Mobile: Full width
+- `sm={6}` - Small tablets: Half width (2 columns)
+- `md={3}` - Desktop: Quarter width (4 columns)
+- `md={4}` - Desktop: Third width (3 columns)
+- `md={6}` - Desktop: Half width (2 columns)
+- `md={9}` - Desktop: Three-quarters width
+
+### Dashboard Layouts
+
+<Accordion title="Live View Dashboard Layout">
+  
+  **Three-Column Design**:
+  
+  **Left Column** (`md={2.2}`):
+  - Flight Phases table
+  - Real-Time Data panel
+  
+  **Center Column** (`md={6.8}`):
+  - Live video feed (primary focus)
+  - Feed switcher button
+  
+  **Right Column** (`md={3}`):
+  - Two-column sub-grid:
+    - Altitude chart (`md={6}`)
+    - 3D rocket model (`md={6}`)
+  - Full-width map (`md={12}`)
+
+</Accordion>
+
+<Accordion title="Live Telemetry Dashboard Layout">
+  
+  **Two-Column Design**:
+  
+  **Left Column** (`md={3}`):
+  - GPS map
+  - Battery status panel
+  
+  **Right Column** (`md={9}`):
+  - 3×2 grid of components:
+    - Altitude chart (`md={4}`)
+    - Velocity chart (`md={4}`)
+    - Pressure chart (`md={4}`)
+    - Temperature chart (`md={4}`)
+    - Real-Time Data panel (`md={4}`)
+    - Flight Phases table (`md={4}`)
+
+</Accordion>
+
+<Accordion title="Test Bench Dashboard Layout">
+  
+  **Two-Column Design**:
+  
+  **Left Column** (`md={9}`):
+  - Three charts stacked:
+    - Force chart (2 columns on tablet: `sm={6}`)
+    - Temperature chart (2 columns on tablet: `sm={6}`)
+    - Pressure chart (full width: `xs={12}`)
+  
+  **Right Column** (`md={3}`):
+  - Real-Time Data panel
+  - Maximum Values panel
+  - Ignition button
+
+</Accordion>
+
+### Responsive Behavior
+
+**Desktop (≥960px)**:
+- Multi-column layouts as designed
+- All visualizations visible simultaneously
+- Optimal for mission control stations
+
+**Tablet (600-959px)**:
+- Some panels stack into 2-column grids
+- Charts resize to fit smaller widths
+- Scrolling may be required for all content
+
+**Mobile (under 600px)**:
+- Single-column layout (all `xs={12}`)
+- Vertical scrolling to access all panels
+- Charts scale down to 300px width
+- Touch-friendly button sizes maintained
+
+<Note>
+  The responsive grid ensures SAFI ControlHub remains usable on mobile devices for monitoring, though desktop displays are recommended for active mission control.
+</Note>
+
+## Visualization Best Practices
+
+### Color Coding
+
+**Consistent Color Assignments**:
+- Use the same color for a parameter across all dashboards
+- High-contrast colors against dark backgrounds
+- Red reserved for warnings and critical alerts
+- Cyan as primary brand color for general data
+
+### Data Density
+
+**Balance Information and Clarity**:
+- Don't overcrowd charts with too many data points
+- Use appropriate scales to show variation clearly
+- Include units in all labels to prevent confusion
+- Display only essential data on primary screens
+
+### Real-Time Updates
+
+**Optimize for Responsiveness**:
+- Update visualizations only when data changes
+- Avoid unnecessary animations that distract from data
+- Use instant transitions for telemetry (no easing)
+- Maintain 60fps for smooth user experience
+
+### Accessibility
+
+**Ensure Visibility in All Conditions**:
+- High contrast between text and backgrounds
+- Large font sizes for control room visibility from distance
+- Color-blind safe palette (avoid red-green only distinctions)
+- Text labels supplement color coding
+
+<Tip>
+  Test dashboards on the actual displays used in your control room. Projectors and large monitors may render colors differently than development screens.
+</Tip>

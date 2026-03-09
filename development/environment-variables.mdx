@@ -1,0 +1,339 @@
+---
+title: Environment Variables
+description: Configure environment variables for SAFI ControlHub backend and database connections
+---
+
+SAFI ControlHub uses environment variables to configure server settings, database connections, and CORS policies. All configuration is managed through `src/config.js` which reads from environment variables with sensible defaults.
+
+## Configuration File
+
+The main configuration file is located at `src/config.js:1` and exports all environment settings:
+
+```javascript
+export const PORT = process.env.PORT || 3000;
+
+export const PG_PORT = process.env.PG_PORT || 5432;
+export const PG_HOST = process.env.PG_HOST || "localhost";
+export const PG_USER = process.env.PG_USER || "postgres";
+export const PG_PASSWORD = process.env.PG_PASSWORD || "admin@123";
+export const PG_DATABASE = process.env.PG_DATABASE || "rocket_data";
+
+export const ORIGIN = process.env.ORIGIN || "http://localhost:5173";
+```
+
+## Environment Variables Reference
+
+### Server Configuration
+
+<ResponseField name="PORT" type="number" default="3000">
+  The port on which the backend HTTP and WebSocket server will run.
+  
+  **Usage in code:** `src/index.js:4`
+  
+  ```bash
+  PORT=3000
+  ```
+</ResponseField>
+
+<ResponseField name="ORIGIN" type="string" default="http://localhost:5173">
+  The allowed CORS origin for frontend requests. This should match your frontend application URL.
+  
+  **Usage in code:** `src/config.js:9`
+  
+  <CodeGroup>
+  ```bash Development
+  ORIGIN=http://localhost:5173
+  ```
+  
+  ```bash Production
+  ORIGIN=https://controlhub.yourdomain.com
+  ```
+  </CodeGroup>
+</ResponseField>
+
+### Database Configuration
+
+<ResponseField name="PG_HOST" type="string" default="localhost">
+  PostgreSQL server hostname or IP address.
+  
+  **Usage in code:** `src/db.js:12`
+  
+  <CodeGroup>
+  ```bash Local Development
+  PG_HOST=localhost
+  ```
+  
+  ```bash Remote Database
+  PG_HOST=db.example.com
+  ```
+  
+  ```bash Docker
+  PG_HOST=postgres
+  ```
+  </CodeGroup>
+</ResponseField>
+
+<ResponseField name="PG_PORT" type="number" default="5432">
+  PostgreSQL server port number.
+  
+  **Usage in code:** `src/db.js:11`
+  
+  ```bash
+  PG_PORT=5432
+  ```
+</ResponseField>
+
+<ResponseField name="PG_USER" type="string" default="postgres">
+  PostgreSQL database user for authentication.
+  
+  **Usage in code:** `src/db.js:13`
+  
+  ```bash
+  PG_USER=postgres
+  ```
+</ResponseField>
+
+<ResponseField name="PG_PASSWORD" type="string" default="admin@123">
+  PostgreSQL database password for authentication.
+  
+  **Usage in code:** `src/db.js:14`
+  
+  <Warning>
+    Change the default password in production environments. Never commit real passwords to version control.
+  </Warning>
+  
+  ```bash
+  PG_PASSWORD=your_secure_password_here
+  ```
+</ResponseField>
+
+<ResponseField name="PG_DATABASE" type="string" default="rocket_data">
+  PostgreSQL database name to connect to.
+  
+  **Usage in code:** `src/db.js:15`
+  
+  ```bash
+  PG_DATABASE=rocket_data
+  ```
+</ResponseField>
+
+## Setting Up Environment Variables
+
+<Steps>
+  <Step title="Create .env file">
+    Create a `.env` file in the root directory of the project:
+    
+    ```bash
+    touch .env
+    ```
+    
+    <Warning>
+      Add `.env` to your `.gitignore` file to prevent sensitive credentials from being committed to version control.
+    </Warning>
+  </Step>
+
+  <Step title="Add configuration values">
+    Add your environment variables to the `.env` file:
+    
+    ```bash .env
+    # Server Configuration
+    PORT=3000
+    ORIGIN=http://localhost:5173
+
+    # Database Configuration
+    PG_HOST=localhost
+    PG_PORT=5432
+    PG_USER=postgres
+    PG_PASSWORD=admin@123
+    PG_DATABASE=rocket_data
+    ```
+  </Step>
+
+  <Step title="Load environment variables">
+    The application automatically reads environment variables from the system. If using a `.env` file, you may need to add `dotenv` package:
+    
+    <CodeGroup>
+    ```bash npm
+    npm install dotenv
+    ```
+    
+    ```bash yarn
+    yarn add dotenv
+    ```
+    </CodeGroup>
+    
+    Then import it at the top of `src/index.js`:
+    
+    ```javascript
+    import 'dotenv/config';
+    ```
+  </Step>
+
+  <Step title="Verify configuration">
+    Start the server and check the console output for connection confirmation:
+    
+    ```bash
+    npm run dev
+    ```
+    
+    You should see:
+    ```
+    Database connected
+    Servidor HTTP + WS corriendo en puerto 3000
+    ```
+  </Step>
+</Steps>
+
+## Database Connection Pool
+
+The PostgreSQL connection is managed through a connection pool configured in `src/db.js:10`:
+
+```javascript
+import pg from "pg";
+
+export const pool = new pg.Pool({
+  port: PG_PORT,
+  host: PG_HOST,
+  user: PG_USER,
+  password: PG_PASSWORD,
+  database: PG_DATABASE,
+});
+
+pool.on("connect", () => {
+  console.log("Database connected");
+});
+```
+
+The pool automatically manages connections and provides efficient connection reuse across requests.
+
+## Environment-Specific Configurations
+
+### Development Environment
+
+```bash .env.development
+PORT=3000
+ORIGIN=http://localhost:5173
+PG_HOST=localhost
+PG_PORT=5432
+PG_USER=postgres
+PG_PASSWORD=admin@123
+PG_DATABASE=rocket_data
+```
+
+### Production Environment
+
+```bash .env.production
+PORT=3000
+ORIGIN=https://your-production-domain.com
+PG_HOST=production-db-host.com
+PG_PORT=5432
+PG_USER=production_user
+PG_PASSWORD=strong_production_password
+PG_DATABASE=rocket_data
+```
+
+<Warning>
+  **Production Security Checklist:**
+  - Use strong, unique passwords for database credentials
+  - Restrict database access to specific IP addresses
+  - Use SSL/TLS for database connections
+  - Set appropriate CORS origin (avoid wildcards)
+  - Enable SSL for production database connections
+  - Use environment variable injection from your hosting platform
+  - Never use default credentials
+</Warning>
+
+### Docker Environment
+
+When running in Docker containers:
+
+```bash .env.docker
+PORT=3000
+ORIGIN=http://localhost:5173
+PG_HOST=postgres
+PG_PORT=5432
+PG_USER=postgres
+PG_PASSWORD=admin@123
+PG_DATABASE=rocket_data
+```
+
+<Note>
+  In Docker Compose, `PG_HOST` should match the PostgreSQL service name defined in your `docker-compose.yml`.
+</Note>
+
+## Validation and Troubleshooting
+
+### Testing Database Connection
+
+Verify your database credentials by attempting a direct connection:
+
+```bash
+psql -h localhost -p 5432 -U postgres -d rocket_data
+```
+
+If this fails, check:
+- PostgreSQL is running
+- Credentials are correct
+- Database exists
+- PostgreSQL is accepting connections on the specified port
+
+### Common Issues
+
+**Database connection refused:**
+```
+Error: connect ECONNREFUSED 127.0.0.1:5432
+```
+
+**Solutions:**
+- Verify PostgreSQL is running: `sudo systemctl status postgresql`
+- Check `PG_PORT` matches PostgreSQL configuration
+- Ensure PostgreSQL is configured to accept TCP/IP connections in `postgresql.conf`
+
+**Authentication failed:**
+```
+Error: password authentication failed for user "postgres"
+```
+
+**Solutions:**
+- Verify `PG_USER` and `PG_PASSWORD` are correct
+- Check `pg_hba.conf` for authentication method settings
+- Reset PostgreSQL user password if needed
+
+**Database does not exist:**
+```
+Error: database "rocket_data" does not exist
+```
+
+**Solutions:**
+- Create the database: `createdb -U postgres rocket_data`
+- Verify `PG_DATABASE` name matches existing database
+- See [Database Setup](/development/database-setup) for initialization
+
+**CORS errors in browser:**
+```
+Access to fetch at 'http://localhost:3000' from origin 'http://localhost:5174' has been blocked by CORS policy
+```
+
+**Solutions:**
+- Update `ORIGIN` to match your frontend URL exactly
+- Check for typos in protocol (http vs https)
+- Restart backend server after changing environment variables
+
+## Frontend Environment Variables
+
+The frontend uses `VITE_` prefixed environment variables. Create `frontend/.env`:
+
+```bash frontend/.env
+VITE_API_URL=http://localhost:3000
+VITE_WS_URL=ws://localhost:3000
+```
+
+<Note>
+  Vite only exposes environment variables prefixed with `VITE_` to the client-side code for security.
+</Note>
+
+## Next Steps
+
+- [Database Setup Guide](/development/database-setup)
+- [Local Development Setup](/development/local-setup)
+- [Architecture Overview](/development/architecture-overview)

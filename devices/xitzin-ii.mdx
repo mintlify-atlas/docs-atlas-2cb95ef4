@@ -1,0 +1,137 @@
+---
+title: XITZIN-II Rocket System
+description: Real-time telemetry monitoring for the XITZIN-II rocket
+---
+
+XITZIN-II is a rocket system with comprehensive telemetry, flight phase tracking, and multi-battery monitoring capabilities.
+
+## Overview
+
+The XITZIN-II dashboard (`frontend/src/pages/Xitzin2Data.jsx`) provides real-time monitoring during rocket flights with:
+
+- Live GPS tracking and mapping
+- Flight phase state machine
+- Multi-sensor telemetry charts
+- Battery status monitoring (up to 5 batteries)
+- Mission state visualization
+
+## Data Streams
+
+### Primary Telemetry Channel: `xitzin2-datos`
+
+**WebSocket Channel:** `xitzin2-datos`  
+**Update Rate:** 200ms  
+**Database Table:** `xitzin_2_data`  
+**Endpoint:** `GET/POST /api/xitzin2data`
+
+<Accordion title="Telemetry Data Fields">
+
+| Field | Type | Description | Units |
+|-------|------|-------------|-------|
+| `date` | string | Data timestamp date | - |
+| `time` | string | Data timestamp time | - |
+| `altitude` | float | Barometric altitude | meters |
+| `temperature` | float | Ambient temperature | °C |
+| `pressure` | float | Atmospheric pressure | Pa |
+| `velocity` | float | Ground speed | km/h |
+| `latitude` | float | GPS latitude | decimal degrees |
+| `longitude` | float | GPS longitude | decimal degrees |
+| `accel_x` | float | X-axis acceleration | m/s² |
+| `accel_y` | float | Y-axis acceleration | m/s² |
+| `accel_z` | float | Z-axis acceleration | m/s² |
+| `mission_state` | integer | Current flight phase (0-6) | - |
+| `air_brake_angle` | float | Air brake deployment angle | degrees |
+
+</Accordion>
+
+### Battery Monitoring Channel: `xitzin2-baterias`
+
+**WebSocket Channel:** `xitzin2-baterias`  
+**Update Rate:** 5 seconds  
+**Database Table:** `xitzin_2_batteries`  
+**Endpoint:** `GET/POST /api/xitzin2batteries`
+
+<Accordion title="Battery Data Fields">
+
+| Field | Type | Description | Units |
+|-------|------|-------------|-------|
+| `battery_id` | string | Unique battery identifier | - |
+| `battery_level` | float | State of charge | % (0-100) |
+| `voltage` | float | Terminal voltage | V |
+| `temperature` | float | Battery temperature | °C |
+
+</Accordion>
+
+## Mission States (CONOPS)
+
+The `mission_state` field tracks the rocket's flight phase:
+
+| State | Index | Description |
+|-------|-------|-------------|
+| **Preflight** | 0 | Pre-launch checks and initialization |
+| **Lift-off** | 1 | Motor ignition and launch |
+| **Air brakes** | 2 | Active air brake control phase |
+| **Apogee** | 3 | Maximum altitude reached |
+| **Drogue** | 4 | Drogue parachute deployed |
+| **Main** | 5 | Main parachute deployed |
+| **Land** | 6 | Touchdown complete |
+
+## Monitoring Features
+
+The XITZIN-II dashboard displays:
+
+### Real-Time Data Panel
+
+- Latitude/Longitude
+- Velocity (km/h)
+- Altitude (m)
+- Temperature (°C)
+- Pressure
+- Current CONOPS state
+
+### Visualization Components
+
+<CardGroup cols={2}>
+  <Card title="Line Charts" icon="chart-line">
+    - Altitude vs time (max altitude tracked)
+    - Velocity vs time (max velocity tracked)
+    - Pressure vs time
+    - Temperature vs time
+  </Card>
+  
+  <Card title="Map View" icon="map">
+    Live GPS position on OpenStreetMap with coordinate popup
+  </Card>
+  
+  <Card title="Mission State Table" icon="table">
+    All 7 flight phases with active/inactive status highlighting
+  </Card>
+  
+  <Card title="Battery Monitor" icon="battery-full">
+    Up to 5 batteries with level bars, voltage, and temperature
+  </Card>
+</CardGroup>
+
+## Data Fetching
+
+The frontend polls data every 150ms using throttled HTTP requests:
+
+```javascript
+// frontend/src/pages/Xitzin2Data.jsx:87-98
+const throttledFetchData = throttle(fetchData, 100);
+
+const interval = setInterval(() => {
+  throttledFetchData();
+}, 150);
+```
+
+<Warning>
+XITZIN-II uses HTTP polling instead of WebSocket subscriptions in the current implementation. The `xitzin2-datos` channel is emitted by the backend but not consumed by the frontend.
+</Warning>
+
+## Source Code References
+
+- **Frontend Dashboard:** `frontend/src/pages/Xitzin2Data.jsx`
+- **API Routes:** `src/routes/data.routes.js:19-27`
+- **WebSocket Handler:** `src/websocket.js:88-104`
+- **Database Tables:** `xitzin_2_data`, `xitzin_2_batteries`

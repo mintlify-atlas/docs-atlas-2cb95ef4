@@ -1,0 +1,354 @@
+---
+title: 'Test Bench Control'
+description: 'Safely control rocket motor test stands with remote ignition and real-time monitoring'
+icon: 'fire'
+---
+
+## Overview
+
+The Test Bench Control system enables safe, remote operation of rocket motor test stands with integrated monitoring and ignition capabilities. All operations are conducted from the Test Bench Dashboard with comprehensive safety features.
+
+<Info>
+  Test Bench Control is designed for static fire tests of rocket motors, allowing operators to maintain safe distance while controlling ignition and monitoring performance.
+</Info>
+
+## Control Capabilities
+
+<CardGroup cols={2}>
+  <Card title="Remote Ignition" icon="fire-flame-curved">
+    Trigger motor ignition from the dashboard with single-click operation
+  </Card>
+  <Card title="Real-Time Monitoring" icon="display">
+    Track force, temperature, and pressure throughout the burn
+  </Card>
+  <Card title="Safety Interlocks" icon="shield-halved">
+    Built-in safety features prevent accidental activation
+  </Card>
+  <Card title="Data Recording" icon="database">
+    Automatic logging of all sensor data for post-test analysis
+  </Card>
+</CardGroup>
+
+## Ignition System
+
+The remote ignition system provides safe, reliable motor starts from the control room.
+
+### Ignition Control Interface
+
+The ignition button appears on the Test Bench Dashboard with distinctive styling:
+
+- **Location**: Bottom of the right sidebar below telemetry panels
+- **Visual Design**: Gradient coral-to-orange background with shadow effects
+- **Button Text**: "Ignición"
+- **Size**: Full-width of sidebar for easy targeting
+
+<Accordion title="Ignition Process">
+  
+  1. **Pre-Ignition Checks**
+     - Verify all personnel are clear of test stand
+     - Confirm sensors are reading nominal values
+     - Ensure data recording is active
+  
+  2. **Initiate Ignition**
+     - Click the "Ignición" button on the dashboard
+     - Visual feedback shows button press
+     - Command sent via POST request to `/ignicion` endpoint
+  
+  3. **Command Transmission**
+     - REST API call: `POST ${baseURL}/ignicion`
+     - Payload: `{ command: "IGNICION" }`
+     - Server receives and processes command
+  
+  4. **Broadcast to All Clients**
+     - Server sets `ignicionState = true`
+     - WebSocket message sent on `ignicion-estado` channel
+     - All connected dashboards receive notification
+     - State: `{ command: "IGNICION" }`
+  
+  5. **Automatic Reset**
+     - After 1000ms (1 second), server resets state
+     - Second WebSocket message sent: `{ command: null }`
+     - Prevents sustained signal to ignition hardware
+
+</Accordion>
+
+### Safety Features
+
+<Warning>
+  The ignition command triggers actual hardware. Always follow your organization's safety protocols and maintain proper clearance distances.
+</Warning>
+
+**Built-in Safeguards:**
+
+- **Timed Signal**: Ignition command automatically expires after 1 second
+- **Single Activation**: One button press = one ignition attempt
+- **Visual Confirmation**: Console logging confirms command transmission
+- **Error Handling**: Failed requests are caught and logged without crashing the UI
+
+**Recommended Safety Protocols:**
+
+1. Implement physical safety switches at the test stand
+2. Use a countdown procedure before ignition
+3. Maintain clear communication with all personnel
+4. Verify remote emergency stop functionality
+5. Keep fire suppression equipment ready
+
+<Tip>
+  Consider implementing a two-factor ignition system where both a physical key switch and dashboard button must be activated simultaneously.
+</Tip>
+
+## Real-Time Monitoring During Tests
+
+The Test Bench Dashboard provides comprehensive monitoring throughout the burn cycle.
+
+### Monitored Parameters
+
+<Accordion title="Force (Thrust) Measurement">
+  
+  **Metric**: Fuerza (Ns)
+  
+  **Display Color**: Cyan (`#61DAFB`)
+  
+  **Purpose**: Measures the thrust force produced by the motor
+  
+  **Chart Features**:
+  - Real-time line graph showing force over time
+  - Automatic Y-axis scaling to accommodate peak thrust
+  - Last 100 data points displayed for full burn profile
+  
+  **Data Panel**:
+  - Current force value in Newtons-seconds
+  - Maximum force achieved during test
+  - Updates every 500ms
+  
+  <Info>
+    The force curve reveals motor performance characteristics including ignition delay, thrust buildup, steady-state operation, and tail-off.
+  </Info>
+
+</Accordion>
+
+<Accordion title="Temperature Monitoring">
+  
+  **Metric**: Temperatura (°C)
+  
+  **Display Color**: Green (`#50C878`)
+  
+  **Purpose**: Tracks combustion chamber temperature
+  
+  **Chart Features**:
+  - Synchronized timeline with force and pressure charts
+  - Green line for easy identification
+  - Historical trend visible throughout burn
+  
+  **Data Panel**:
+  - Current temperature reading
+  - Peak temperature recorded
+  - Helps identify thermal issues or anomalies
+  
+  <Warning>
+    Excessive temperatures may indicate combustion instabilities or thermal protection failures. Monitor closely for values exceeding design limits.
+  </Warning>
+
+</Accordion>
+
+<Accordion title="Pressure Monitoring">
+  
+  **Metric**: Presión (Psi)
+  
+  **Display Color**: Orange (`#FFB74D`)
+  
+  **Purpose**: Monitors internal chamber pressure
+  
+  **Chart Features**:
+  - Orange line graph for pressure over time
+  - Critical for detecting pressure spikes or drops
+  - Correlated with thrust data for performance analysis
+  
+  **Data Panel**:
+  - Real-time pressure in PSI
+  - Maximum pressure achieved
+  - Early warning for overpressure conditions
+  
+  <Warning>
+    Sudden pressure spikes may indicate casing failure risk. Implement automatic abort if pressure exceeds safe thresholds.
+  </Warning>
+
+</Accordion>
+
+### Chart Synchronization
+
+All three parameter charts share a common timeline:
+
+- **X-axis**: Data point index (0 to 99)
+- **Time Scale**: Last 100 measurements at 500ms intervals = ~50 seconds visible
+- **Updates**: All charts redraw simultaneously when new data arrives
+- **Scaling**: Each Y-axis independently scales to fit its parameter's range
+
+This synchronized view enables operators to identify correlations between parameters, such as:
+
+- Pressure-thrust relationships
+- Temperature lag behind pressure changes
+- Abnormal trends across multiple sensors
+
+## Data Recording and Storage
+
+All test bench operations are automatically logged for analysis and compliance.
+
+### Database Storage
+
+**Table**: `prueba_estatica_0`
+
+**Fields Recorded**:
+- `id` - Auto-incrementing unique identifier
+- `date` - Test date
+- `time` - Precise timestamp for each measurement
+- `fuerza` - Thrust force in Newtons-seconds
+- `temperatura` - Temperature in Celsius
+- `presion` - Pressure in PSI
+
+**Recording Frequency**: Every 500ms during active testing
+
+<Accordion title="Data Retention">
+  
+  - Full test history maintained in database indefinitely
+  - Dashboard displays last 100 records (configurable)
+  - Historical data accessible for post-test analysis
+  - Export capabilities for external analysis tools
+
+</Accordion>
+
+### WebSocket Data Distribution
+
+Test data flows through the `banco-datos` WebSocket channel:
+
+1. Sensors capture force, temperature, pressure
+2. Data written to `prueba_estatica_0` database table
+3. Server queries last 100 records every 500ms
+4. Change detection compares new data to last transmission
+5. If changed, data broadcast to all connected clients
+6. Dashboards update charts and numeric displays
+
+<Info>
+  The change detection mechanism ensures network efficiency while maintaining real-time responsiveness. No bandwidth is wasted on redundant transmissions.
+</Info>
+
+## Control Room Setup
+
+For optimal test bench operations, configure your control room as follows:
+
+### Hardware Requirements
+
+- **Computer**: Any device capable of running a modern web browser
+- **Display**: Large monitor (24"+ recommended) for visibility across control room
+- **Network**: Reliable connection to server hosting ControlHub
+- **Backup Systems**: Secondary device ready in case of primary failure
+
+### Network Configuration
+
+<CardGroup cols={2}>
+  <Card title="WebSocket Connection" icon="network-wired">
+    Ensure firewall allows WebSocket connections on configured port
+  </Card>
+  <Card title="API Access" icon="server">
+    REST API endpoint must be accessible for ignition commands
+  </Card>
+</CardGroup>
+
+### Pre-Test Checklist
+
+Before each static fire test:
+
+- [ ] Verify dashboard loads and displays "N/A" for all metrics
+- [ ] Confirm WebSocket connection established (data updates on reconnect)
+- [ ] Test ignition button (observe console for API call confirmation)
+- [ ] Review safety protocols with all personnel
+- [ ] Ensure emergency stop systems are functional
+- [ ] Check sensor calibration dates
+- [ ] Confirm data recording is active
+- [ ] Clear test area and establish safety perimeter
+
+<Tip>
+  Run a dry fire test with the motor removed to verify all systems are communicating properly before live motor tests.
+</Tip>
+
+## Troubleshooting
+
+<Accordion title="Ignition Button Not Responding">
+  
+  **Symptoms**: Clicking "Ignición" button has no effect
+  
+  **Possible Causes**:
+  - Network connectivity lost
+  - API endpoint unreachable
+  - Server not processing requests
+  
+  **Solutions**:
+  1. Open browser console (F12) and check for error messages
+  2. Verify network connection to server
+  3. Test API endpoint accessibility: `curl -X POST ${baseURL}/ignicion`
+  4. Restart WebSocket server if necessary
+  5. Refresh dashboard page to re-establish connection
+
+</Accordion>
+
+<Accordion title="Sensor Data Not Updating">
+  
+  **Symptoms**: Charts frozen, metrics showing "N/A" or stale values
+  
+  **Possible Causes**:
+  - WebSocket connection dropped
+  - Sensor hardware failure
+  - Database write failures
+  
+  **Solutions**:
+  1. Check WebSocket connection status in browser console
+  2. Verify sensor hardware is powered and connected
+  3. Query database directly to confirm data is being written
+  4. Restart WebSocket server to force reconnection
+  5. Check for application errors in server logs
+
+</Accordion>
+
+<Accordion title="Charts Displaying Incorrect Data">
+  
+  **Symptoms**: Unusual spikes, flatlines, or unrealistic values
+  
+  **Possible Causes**:
+  - Sensor calibration drift
+  - Data conversion errors
+  - Hardware malfunction
+  
+  **Solutions**:
+  1. Recalibrate sensors using known reference values
+  2. Verify sensor wiring and connections
+  3. Check database for corrupt records
+  4. Review data parsing logic in dashboard code
+  5. Replace suspect sensors with known-good units
+
+</Accordion>
+
+## Best Practices
+
+### Operational Safety
+
+1. **Never bypass safety systems** for convenience
+2. **Maintain multiple communication channels** between control room and test area
+3. **Conduct regular safety drills** including emergency shutdown procedures
+4. **Document all anomalies** in test logs for pattern analysis
+5. **Review historical data** before each test to establish baselines
+
+### Data Management
+
+1. **Archive test data** after each session with descriptive filenames
+2. **Export critical tests** to multiple backup locations
+3. **Review maximum values** against design specifications after each burn
+4. **Trending analysis**: Compare current test to previous runs
+5. **Anomaly investigation**: Investigate any unexpected readings before next test
+
+### System Maintenance
+
+1. **Calibrate sensors monthly** or per manufacturer recommendations
+2. **Test ignition system weekly** (without motor installed)
+3. **Update dashboard software** during maintenance windows, not before tests
+4. **Backup database** before and after each test session
+5. **Document all configuration changes** in system logs

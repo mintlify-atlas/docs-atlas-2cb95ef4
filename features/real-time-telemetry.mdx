@@ -1,0 +1,290 @@
+---
+title: 'Real-Time Telemetry'
+description: 'Monitor live telemetry data from rockets and test equipment with sub-second latency'
+icon: 'satellite-dish'
+---
+
+## Overview
+
+SAFI ControlHub's real-time telemetry system delivers live sensor data from rockets and test equipment with minimal latency, enabling critical decision-making during launches and tests.
+
+<CardGroup cols={2}>
+  <Card title="Rocket Telemetry" icon="rocket">
+    Track altitude, velocity, position, temperature, and flight phases in real-time
+  </Card>
+  <Card title="Test Bench Telemetry" icon="wrench">
+    Monitor force, pressure, and temperature during static fire tests
+  </Card>
+</CardGroup>
+
+## Telemetry Channels
+
+SAFI ControlHub uses WebSocket channels for real-time data streaming. Each channel delivers specific telemetry data optimized for different monitoring needs.
+
+### Available Channels
+
+<Accordion title="nuevos-datos (Rocket Flight Data)">
+  
+  **Update Frequency**: 100ms
+  
+  **Data Fields**:
+  - `date` - Current date
+  - `time` - Timestamp of measurement
+  - `altitude` - Altitude above ground level (meters)
+  - `temperature` - Atmospheric temperature (°C)
+  - `pressure` - Barometric pressure (Pa)
+  - `velocity` - Current velocity (km/h)
+  - `latitude` - GPS latitude coordinate
+  - `longitude` - GPS longitude coordinate
+  - `accel_x` - X-axis acceleration
+  - `accel_y` - Y-axis acceleration
+  - `accel_z` - Z-axis acceleration
+  - `mission_state` - Current flight phase (0-5)
+  - `air_brake_angle` - Active airbrake angle (degrees)
+  
+  **Database**: Stored in `data` table, last 150 records transmitted on connection
+  
+  <Info>
+    This channel powers both the Live View Dashboard and Live Telemetry Dashboard for XITZIN-II missions.
+  </Info>
+
+</Accordion>
+
+<Accordion title="banco-datos (Test Bench Data)">
+  
+  **Update Frequency**: 500ms
+  
+  **Data Fields**:
+  - `id` - Unique measurement identifier
+  - `date` - Test date
+  - `time` - Measurement timestamp
+  - `fuerza` - Thrust force (Newtons-seconds)
+  - `temperatura` - Chamber temperature (°C)
+  - `presion` - Internal pressure (PSI)
+  
+  **Database**: Stored in `prueba_estatica_0` table, last 100 records transmitted
+  
+  <Tip>
+    Use this channel when monitoring static fire tests from the Test Bench Dashboard.
+  </Tip>
+
+</Accordion>
+
+<Accordion title="xitzin2-datos (XITZIN-II Extended Telemetry)">
+  
+  **Update Frequency**: 200ms
+  
+  **Database**: `xitzin_2_data` table, full dataset transmitted
+  
+  Extended telemetry data for advanced XITZIN-II mission monitoring.
+
+</Accordion>
+
+<Accordion title="baterias (Battery Status)">
+  
+  **Update Frequency**: 5000ms (5 seconds)
+  
+  **Data Fields**:
+  - `battery_id` - Unique battery identifier
+  - `battery_level` - Charge level (0-100%)
+  - `voltage` - Current voltage (V)
+  - `temperature` - Battery temperature (°C)
+  
+  **Database**: `battery_status` table
+  
+  <Note>
+    Battery data updates less frequently as these values change slowly. The Live Telemetry Dashboard displays up to 5 batteries with visual charge indicators.
+  </Note>
+
+</Accordion>
+
+<Accordion title="xitzin2-baterias (XITZIN-II Battery Status)">
+  
+  **Update Frequency**: 5000ms (5 seconds)
+  
+  **Database**: `xitzin_2_batteries` table
+  
+  Battery monitoring specific to XITZIN-II rocket systems.
+
+</Accordion>
+
+<Accordion title="laniakea (Laniakea System Data)">
+  
+  **Update Frequency**: 200ms
+  
+  **Database**: `datos_laniakea` table, last 100 records transmitted
+  
+  Telemetry from the Laniakea experimental platform.
+
+</Accordion>
+
+## Live Telemetry Dashboard
+
+The Live Telemetry Dashboard provides a comprehensive view of all rocket telemetry data across multiple synchronized charts.
+
+### Chart Visualizations
+
+Four primary charts display key flight parameters:
+
+<CardGroup cols={2}>
+  <Card title="Altitude Chart" icon="arrow-up">
+    Tracks altitude in meters over time with automatic scaling
+  </Card>
+  <Card title="Velocity Chart" icon="gauge">
+    Displays velocity in km/h throughout the flight
+  </Card>
+  <Card title="Pressure Chart" icon="wind">
+    Shows atmospheric pressure changes as the rocket ascends
+  </Card>
+  <Card title="Temperature Chart" icon="temperature-half">
+    Monitors external temperature variations during flight
+  </Card>
+</CardGroup>
+
+All charts:
+- Use D3.js for smooth rendering
+- Display cyan (`#61DAFB`) line graphs against dark backgrounds
+- Auto-scale to fit the data range
+- Show the most recent data points for real-time tracking
+
+### Telemetry Data Panel
+
+The Real-Time Data panel displays current values for all key metrics:
+
+- **Timestamp**: Date and time of last measurement
+- **GPS Position**: Latitude and longitude coordinates
+- **Velocity**: Current speed in km/h
+- **Altitude**: Height above ground in meters
+- **Temperature**: Atmospheric temperature in °C
+- **Pressure**: Barometric pressure reading
+- **CONOPS**: Current mission state (0-5)
+
+<Info>
+  Values display "N/A" if no data has been received yet, helping you identify connectivity issues.
+</Info>
+
+### Flight Phases Table
+
+A dedicated table tracks mission progress through six phases:
+
+1. **Preflight** - Pre-launch preparation
+2. **Lift-off** - Launch and initial ascent
+3. **Apogee** - Peak altitude reached
+4. **Drogue** - Drogue parachute deployed
+5. **Main** - Main parachute deployed
+6. **Land** - Touchdown complete
+
+The active phase is highlighted with a blue background (`#1E3A8A`) and cyan text, while inactive phases remain dimmed.
+
+### Location Tracking
+
+An interactive OpenStreetMap displays:
+
+- Real-time GPS position marker
+- Auto-panning to keep the rocket centered
+- Zoom level 22 for detailed terrain view
+- Coordinate popup on marker click
+
+<Tip>
+  The map updates automatically as new latitude/longitude data arrives, providing visual confirmation of telemetry reception.
+</Tip>
+
+### Battery Monitoring
+
+Up to 5 battery systems are displayed with:
+
+- Battery ID for identification
+- Visual progress bar showing charge level
+  - Cyan bar when level ≥ 50%
+  - Red bar when level < 50% (warning state)
+- Voltage reading in volts
+- Temperature reading in °C
+
+<Warning>
+  Low battery warnings (red indicators) require immediate attention to prevent system failures during flight.
+</Warning>
+
+## Telemetry Data Flow
+
+### Connection Process
+
+1. Dashboard connects to WebSocket server at configured `SOCKET_URL`
+2. Server immediately sends historical data (last 50-150 records) for each channel
+3. Client displays initial state based on historical data
+4. Server begins sending incremental updates at channel-specific intervals
+5. Dashboard updates visualizations in real-time
+
+### Data Synchronization
+
+The WebSocket implementation uses intelligent change detection:
+
+- Server maintains last transmitted timestamp for each channel
+- Only sends updates when new data is available
+- Prevents redundant transmissions and reduces bandwidth
+- Ensures UI updates only when values actually change
+
+### Error Handling
+
+<Accordion title="Connection Management">
+  
+  The `useWebsocket` hook handles connection lifecycle:
+  
+  - Automatic reconnection on disconnect
+  - Graceful degradation when server is unavailable
+  - Console logging for debugging connection issues
+  - Empty array returned when no data is available
+
+</Accordion>
+
+<Accordion title="Data Validation">
+  
+  All incoming telemetry is validated:
+  
+  - Numeric values parsed with `parseFloat()` or `parseInt()`
+  - Invalid values default to `0` instead of causing errors
+  - Missing fields display as "N/A" in the UI
+  - Type conversion ensures chart compatibility
+
+</Accordion>
+
+## Performance Optimization
+
+### Update Throttling
+
+Charts use React's `useEffect` dependency tracking to minimize re-renders:
+
+- Charts only redraw when data actually changes
+- D3.js operations are batched for efficiency
+- Previous SVG elements are removed before redrawing to prevent memory leaks
+
+### Data Windowing
+
+To maintain performance during long missions:
+
+- Only the last 50-150 data points are kept in memory
+- Older data is automatically discarded on the client side
+- Database stores complete history for post-flight analysis
+
+<Note>
+  The Live Telemetry Dashboard can run continuously for hours without performance degradation thanks to these optimizations.
+</Note>
+
+## Integration Guide
+
+To subscribe to telemetry in your own components:
+
+```javascript
+import useWebsocket from '../api/useWebsocket';
+import { SOCKET_URL } from '../api/socketConfig';
+
+// Subscribe to rocket telemetry
+const rawData = useWebsocket('nuevos-datos', SOCKET_URL);
+
+// Subscribe to test bench data
+const bancoData = useWebsocket('banco-datos', SOCKET_URL);
+
+// Subscribe to battery status
+const batteryData = useWebsocket('baterias', SOCKET_URL);
+```
+
+Data arrives as an array of objects with the fields described in each channel's documentation above.

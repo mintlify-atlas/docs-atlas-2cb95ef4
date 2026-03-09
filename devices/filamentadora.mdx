@@ -1,0 +1,269 @@
+---
+title: Filamentadora Composite Winding System
+description: Automated filament winding system for composite rocket motor fabrication
+---
+
+The Filamentadora is a CNC-controlled composite winding system for manufacturing rocket motor casings with precise fiber placement.
+
+## Overview
+
+The Filamentadora system provides:
+
+- **Automated Winding** - Computer-controlled mandrel rotation and carriage movement
+- **Pattern Visualization** - Real-time 2D preview of winding patterns
+- **Parameter Control** - Adjustable RPM, feed rate, angle, and layer count
+- **Layer Management** - Multi-layer composite builds
+
+## System Components
+
+<CardGroup cols={2}>
+  <Card title="Control Interface" icon="sliders">
+    Parameter configuration and motion control
+  </Card>
+  
+  <Card title="Winding Preview" icon="eye">
+    2D visualization of fiber path and pattern
+  </Card>
+  
+  <Card title="Pattern Calculator" icon="calculator">
+    Real-time path computation based on geometry
+  </Card>
+  
+  <Card title="Status Monitor" icon="circle-info">
+    Running/Paused/Stopped state tracking
+  </Card>
+</CardGroup>
+
+## Winding Parameters
+
+### Geometric Configuration
+
+<Accordion title="Mandrel Geometry">
+
+| Parameter | Field | Unit | Description |
+|-----------|-------|------|-------------|
+| **Diameter** | `diameter` | mm | Mandrel outer diameter |
+| **Length** | `length` | mm | Winding length |
+| **Filament Width** | `width` | mm | Fiber tow width |
+
+**Default Values:**
+- Diameter: 25mm
+- Length: 200mm
+- Width: 0.25mm
+
+**Location:** `frontend/src/components/FilamentadoraConfigurator.jsx:21-23`
+
+</Accordion>
+
+<Accordion title="Winding Pattern">
+
+| Parameter | Field | Unit | Range | Description |
+|-----------|-------|------|-------|-------------|
+| **Angle** | `angle` | degrees | 0-90 | Fiber orientation angle |
+| **Layers** | `layers` | count | 1+ | Number of winding layers |
+
+**Default Values:**
+- Angle: 75°
+- Layers: 10
+
+</Accordion>
+
+<Accordion title="Motion Parameters">
+
+| Parameter | Field | Unit | Range | Description |
+|-----------|-------|------|-------|-------------|
+| **RPM** | `rpm` | RPM | 0-100 | Mandrel rotation speed |
+| **Feed Rate** | `feed` | mm/s | 0-20 | Carriage linear speed |
+
+**Default Values:**
+- RPM: 30
+- Feed: 4 mm/s
+
+**Note:** Feed rate slider uses 0.5 mm/s increments for precision control.
+
+**Location:** `frontend/src/components/FilamentadoraConfigurator.jsx:24-26`
+
+</Accordion>
+
+## Control Commands
+
+The system accepts the following commands via `POST /api/filamentadora`:
+
+<CodeGroup>
+
+```javascript START_ROT
+// Start mandrel rotation
+await axios.post('http://localhost:3000/api/filamentadora', {
+  command: 'START_ROT'
+});
+```
+
+```javascript STOP_ROT
+// Stop mandrel rotation
+await axios.post('http://localhost:3000/api/filamentadora', {
+  command: 'STOP_ROT'
+});
+```
+
+```javascript MOVE_HEAD_FWD
+// Move carriage forward
+await axios.post('http://localhost:3000/api/filamentadora', {
+  command: 'MOVE_HEAD_FWD'
+});
+```
+
+```javascript MOVE_HEAD_BWD
+// Move carriage backward
+await axios.post('http://localhost:3000/api/filamentadora', {
+  command: 'MOVE_HEAD_BWD'
+});
+```
+
+```javascript SET_RPM
+// Set mandrel RPM
+await axios.post('http://localhost:3000/api/filamentadora', {
+  command: 'SET_RPM',
+  value: 50  // RPM value 0-100
+});
+```
+
+```javascript SET_FEED
+// Set carriage feed rate
+await axios.post('http://localhost:3000/api/filamentadora', {
+  command: 'SET_FEED',
+  value: 8.5  // Feed rate in mm/s
+});
+```
+
+</CodeGroup>
+
+## User Interface
+
+### Control Panel
+
+**Location:** `frontend/src/pages/Filamentadora.jsx`
+
+<Accordion title="Control Buttons">
+
+| Button | Command | Function |
+|--------|---------|----------|
+| **Iniciar Giro** | `START_ROT` | Start mandrel rotation |
+| **Detener Giro** | `STOP_ROT` | Stop mandrel rotation |
+| **Cabezal ⏩** | `MOVE_HEAD_FWD` | Move carriage forward |
+| **Cabezal ⏪** | `MOVE_HEAD_BWD` | Move carriage backward |
+
+Buttons show loading spinner while command is processing and highlight when active.
+
+</Accordion>
+
+<Accordion title="Parameter Sliders">
+
+**RPM Slider:**
+- Range: 0-100
+- Step: 1
+- Value label display on drag
+- Commits value on release (`onChangeCommitted`)
+
+**Feed Rate Slider:**
+- Range: 0-20 mm/s
+- Step: 0.5
+- Value label display on drag
+- Commits value on release
+
+**Styling:**
+- Color: `#61DAFB` (cyan)
+- Disabled during command execution
+
+**Location:** `frontend/src/pages/Filamentadora.jsx:124-160`
+
+</Accordion>
+
+### Winding Configurator
+
+**Location:** `frontend/src/pages/Filamentadora2.jsx`, `frontend/src/components/FilamentadoraSections.jsx`
+
+<Accordion title="Configuration Interface">
+
+Provides comprehensive winding parameter setup:
+
+**Input Fields:**
+- Diámetro (mm)
+- Longitud (mm)
+- Filamento Ø (mm)
+- Ángulo (°)
+- RPM Mandril
+- Avance (mm/s)
+- Capas
+
+All fields update in real-time with debounced recalculation (200ms delay).
+
+**Process Controls:**
+- **Iniciar** - Start winding sequence
+- **Pausar** - Pause operation
+- **Stop** - Emergency stop
+
+**Status Display:**
+- Current state: `running` / `paused` / `stopped`
+
+**Location:** `frontend/src/components/FilamentadoraConfigurator.jsx:40-101`
+
+</Accordion>
+
+### 2D Winding Preview
+
+**Component:** `WindingPreview2D`  
+**Location:** `frontend/src/components/Filamentadora2D.jsx`
+
+<Accordion title="Preview Features">
+
+- **Real-time path visualization** - Shows computed fiber trajectory
+- **Zoom control** - 0.5x to 3x zoom with slider
+- **Debounced updates** - 200ms delay prevents excessive recalculation
+- **Loading indicator** - Shows during path computation
+
+The preview window displays the winding pattern based on:
+- Tube diameter and length
+- Fiber width
+- Winding angle
+- Number of layers
+
+**Path Computation:**
+Utilizes `computeWindingPath()` function from `frontend/src/utils/winding.js`
+
+**Location:** `frontend/src/components/FilamentadoraSections.jsx:28-50`
+
+</Accordion>
+
+## Workflow
+
+1. **Configure Parameters** - Set diameter, length, angle, RPM, feed rate, layers
+2. **Preview Pattern** - Visualize winding path in 2D view
+3. **Adjust Zoom** - Scale preview for detailed inspection
+4. **Start Winding** - Begin automated winding sequence
+5. **Monitor Progress** - Track state (running/paused/stopped)
+6. **Control Motion** - Manual overrides for rotation and carriage
+
+## API Communication
+
+All commands sent to `http://localhost:3000/api/filamentadora` with JSON payload:
+
+```javascript
+{
+  command: "COMMAND_NAME",
+  value: number  // Optional, for SET_RPM and SET_FEED
+}
+```
+
+<Warning>
+The system uses busy state to prevent command flooding. Only one command can be processed at a time.
+</Warning>
+
+## Source Code References
+
+- **Control Panel:** `frontend/src/pages/Filamentadora.jsx`
+- **Configurator View:** `frontend/src/pages/Filamentadora2.jsx`
+- **Section Component:** `frontend/src/components/FilamentadoraSections.jsx`
+- **Configuration Panel:** `frontend/src/components/FilamentadoraConfigurator.jsx`
+- **2D Preview:** `frontend/src/components/Filamentadora2D.jsx`
+- **Path Computation:** `frontend/src/utils/winding.js`
+- **API Endpoint:** `/api/filamentadora` (backend implementation not provided)

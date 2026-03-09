@@ -1,0 +1,205 @@
+---
+title: 'Dashboard Overview'
+description: 'Explore the main SAFI ControlHub dashboards for rocket telemetry and test bench monitoring'
+icon: 'gauge'
+---
+
+## Overview
+
+SAFI ControlHub provides specialized dashboards for monitoring rocket launches and test bench operations. Each dashboard is purpose-built to deliver real-time insights during critical mission phases.
+
+<CardGroup cols={2}>
+  <Card title="Live View Dashboard" icon="rocket" href="#live-view-dashboard">
+    Track rocket launches with live video feeds, telemetry, and 3D visualization
+  </Card>
+  <Card title="Test Bench Dashboard" icon="flask" href="#test-bench-dashboard">
+    Monitor static fire tests with real-time sensor data and ignition controls
+  </Card>
+</CardGroup>
+
+## Live View Dashboard
+
+The Live View Dashboard (XITZIN-II) is your mission control center during rocket launches, providing comprehensive real-time monitoring across multiple data streams.
+
+### Interface Layout
+
+The dashboard is organized into three main columns for optimal information density:
+
+<Accordion title="Left Column: Flight Status & Telemetry">
+  
+  **Flight Phases Panel**
+  
+  Displays the current mission phase with visual indicators:
+  - Preflight
+  - Lift-off
+  - Apogee
+  - Drogue deployment
+  - Main parachute deployment
+  - Landing
+  
+  The active phase is highlighted in blue for immediate visibility.
+  
+  **Real-Time Data Panel**
+  
+  Shows current telemetry readings:
+  - GPS Coordinates (Latitude/Longitude)
+  - Velocity (km/h)
+  - Altitude (m)
+  - Temperature (°C)
+  - Atmospheric Pressure
+  - Mission State (CONOPS)
+  
+  All values update automatically as new data arrives via WebSocket.
+
+</Accordion>
+
+<Accordion title="Center Column: Live Feed">
+  
+  **Video Feed Display**
+  
+  The central panel displays live video feeds from the rocket or ground cameras. You can:
+  
+  - Switch between multiple camera feeds using the "Cambiar Feed" button
+  - View YouTube live streams or static images
+  - Monitor the feed in real-time during flight operations
+  
+  <Note>
+    The feed automatically switches to standby images when live video is unavailable.
+  </Note>
+
+</Accordion>
+
+<Accordion title="Right Column: Visualization & Analysis">
+  
+  **Altitude Chart**
+  
+  A D3.js-powered vertical gauge showing:
+  - Current altitude with a moving pointer
+  - Graduated scale with major (10m) and minor (2m) tick marks
+  - Simulation mode for testing and demonstrations
+  
+  **Rocket Orientation (3D Model)**
+  
+  An interactive 3D visualization displaying:
+  - Real-time rocket orientation based on accelerometer data
+  - Smooth animations showing pitch and roll movements
+  - Three.js rendering with GLTF model support
+  
+  **Current Location Map**
+  
+  An OpenStreetMap display showing:
+  - Real-time GPS position with a marker
+  - Auto-centering as the rocket moves
+  - Coordinate popup for precise location data
+
+</Accordion>
+
+### Data Updates
+
+<Info>
+  The Live View Dashboard subscribes to the `nuevos-datos` WebSocket channel, receiving updates every 100ms for near-instantaneous telemetry display.
+</Info>
+
+### Simulation Mode
+
+For testing and demonstration purposes, the altitude chart includes a simulation feature:
+
+1. Click "Iniciar Simulación" to start a simulated flight
+2. Watch the altitude climb to 3000m over 20 seconds
+3. Brief pause at apogee
+4. Descent back to ground level over 20 seconds
+5. Click "Detener Simulación" to stop at any time
+
+## Test Bench Dashboard
+
+The Test Bench Dashboard monitors static fire tests for rocket motors, providing real-time sensor data and remote ignition control.
+
+### Key Features
+
+<CardGroup cols={2}>
+  <Card title="Real-Time Charts" icon="chart-line">
+    Three primary metrics displayed as line charts:
+    - Force (Ns) in cyan
+    - Temperature (°C) in green
+    - Pressure (Psi) in orange
+  </Card>
+  <Card title="Live Metrics" icon="gauge-high">
+    Current sensor readings updated in real-time from the test bench hardware
+  </Card>
+  <Card title="Historical Maxima" icon="chart-simple">
+    Track peak values achieved during the current test run
+  </Card>
+  <Card title="Remote Ignition" icon="fire">
+    Safe, remote ignition control with visual feedback
+  </Card>
+</CardGroup>
+
+### Interface Components
+
+**Monitor de Parámetros (Parameter Monitor)**
+
+The main monitoring area displays three synchronized charts:
+
+- **Force Chart**: Measures thrust in Newtons-seconds
+- **Temperature Chart**: Tracks combustion chamber temperature
+- **Pressure Chart**: Monitors internal pressure in PSI
+
+All charts use D3.js for smooth, responsive visualization and automatically scale to show the last 100 data points.
+
+**Data Sidebar**
+
+The right sidebar provides two information panels:
+
+1. **Datos en Tiempo Real** (Real-Time Data)
+   - Current force, pressure, and temperature readings
+   - Color-coded by metric for quick identification
+   - Updates synchronized with chart data
+
+2. **Máximos Registrados** (Maximum Values)
+   - Peak force achieved during test
+   - Maximum temperature recorded
+   - Highest pressure measurement
+
+**Ignition Control**
+
+A prominent gradient button at the bottom of the sidebar provides:
+- One-click remote ignition command
+- Visual hover and click feedback
+- Sends `IGNICION` command via REST API to `/ignicion` endpoint
+
+<Warning>
+  The ignition command triggers real hardware. Ensure all safety protocols are followed before activation.
+</Warning>
+
+### WebSocket Integration
+
+The Test Bench Dashboard subscribes to the `banco-datos` WebSocket channel:
+
+- Updates every 500ms with the latest 100 measurements
+- Automatic reconnection on connection loss
+- Low-latency data delivery for critical monitoring
+
+<Tip>
+  Data is stored in the `prueba_estatica_0` database table, allowing for post-test analysis and historical review.
+</Tip>
+
+## Responsive Design
+
+Both dashboards feature responsive layouts:
+
+- **Desktop**: Multi-column layout with all panels visible
+- **Tablet**: Reorganized grid with stacked elements
+- **Mobile**: Single-column view with scrollable sections
+
+Charts automatically resize based on screen width while maintaining readability.
+
+## Theme and Styling
+
+All dashboards use a consistent "SpaceX-inspired" dark theme:
+
+- Background: Deep navy (`#0A192F`)
+- Cards: Midnight blue (`#112240`) with cyan borders
+- Accent color: Bright cyan (`#61DAFB`)
+- Buttons: Gradient coral-to-orange with shadow effects
+
+This high-contrast color scheme ensures excellent visibility in both bright control rooms and dimly lit mission control environments.

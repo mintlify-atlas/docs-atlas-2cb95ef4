@@ -1,80 +1,238 @@
 ---
-title: "Quickstart"
-description: "Start building awesome documentation in minutes"
+title: 'Quick Start'
+description: 'Get SAFI ControlHub running and monitoring telemetry in under 10 minutes'
 ---
 
-## Get started in three steps
+## Overview
 
-Get your documentation site running locally and make your first customization.
+This guide will walk you through setting up SAFI ControlHub and monitoring your first device telemetry data. You'll have a working installation with live data streams in just a few minutes.
 
-### Step 1: Set up your local environment
+## Prerequisites
 
-<AccordionGroup>
-  <Accordion icon="copy" title="Clone your docs locally">
-    During the onboarding process, you created a GitHub repository with your docs content if you didn't already have one. You can find a link to this repository in your [dashboard](https://dashboard.mintlify.com).
-    
-    To clone the repository locally so that you can make and preview changes to your docs, follow the [Cloning a repository](https://docs.github.com/en/repositories/creating-and-managing-repositories/cloning-a-repository) guide in the GitHub docs.
-  </Accordion>
-  <Accordion icon="rectangle-terminal" title="Start the preview server">
-    1. Install the Mintlify CLI: `npm i -g mint`
-    2. Navigate to your docs directory and run: `mint dev`
-    3. Open `http://localhost:3000` to see your docs live!
-    
-    <Tip>Your preview updates automatically as you edit files.</Tip>
-  </Accordion>
-</AccordionGroup>
+Before you begin, make sure you have:
 
-### Step 2: Deploy your changes
+- **Node.js** (v16 or higher)
+- **PostgreSQL** (v12 or higher)
+- A serial-connected device (optional, for live data)
 
-<AccordionGroup>
-  <Accordion icon="github" title="Install our GitHub app">
-    Install the Mintlify GitHub app from your [dashboard](https://dashboard.mintlify.com/settings/organization/github-app).
-    
-    Our GitHub app automatically deploys your changes to your docs site, so you don't need to manage deployments yourself.
-</Accordion>
-<Accordion icon="palette" title="Update your site name and colors">
-    For a first change, let's update the name and colors of your docs site.
+<Steps>
 
-    1. Open `docs.json` in your editor.
-    2. Change the `"name"` field to your project name.
-    3. Update the `"colors"` to match your brand.
-    4. Save and see your changes instantly at `http://localhost:3000`.
+### Clone the Repository
 
-    <Tip>Try changing the primary color to see an immediate difference!</Tip>
-  </Accordion>
-</AccordionGroup>
+First, get the source code:
 
-### Step 3: Go live
+```bash
+git clone <repository-url>
+cd source
+```
 
-<Accordion icon="rocket" title="Publish your docs">
-  1. Commit and push your changes.
-  2. Your docs will update and be live in moments!
-</Accordion>
+### Set Up the Database
 
-## Next steps
+Create a PostgreSQL database and initialize the schema:
 
-Now that you have your docs running, explore these key features:
+```bash
+psql -U postgres
+```
+
+Then in the PostgreSQL shell:
+
+```sql
+CREATE DATABASE rocket_data;
+\c rocket_data
+\i database/init.sql
+```
+
+<Note>
+The default database name is `rocket_data`. You can change this in your environment configuration.
+</Note>
+
+### Configure Environment Variables
+
+Create a `.env` file in the root directory with your database credentials:
+
+```bash
+PORT=3000
+PG_HOST=localhost
+PG_PORT=5432
+PG_USER=postgres
+PG_PASSWORD=admin@123
+PG_DATABASE=rocket_data
+ORIGIN=http://localhost:5173
+```
+
+<Warning>
+Make sure to change `PG_PASSWORD` from the default value for production deployments.
+</Warning>
+
+### Install Backend Dependencies
+
+Install all required packages:
+
+```bash
+npm install
+```
+
+Key dependencies include:
+- `express` - Web server framework
+- `socket.io` - Real-time WebSocket communication
+- `pg` - PostgreSQL client
+- `serialport` - Serial device communication
+
+### Start the Backend Server
+
+Run the development server:
+
+```bash
+npm run dev
+```
+
+You should see:
+
+```
+Database connected
+Servidor HTTP + WS corriendo en puerto 3000
+```
+
+Test the connection:
+
+```bash
+curl http://localhost:3000/api/ping
+```
+
+### Install Frontend Dependencies
+
+In a new terminal, navigate to the frontend directory:
+
+```bash
+cd frontend
+npm install
+```
+
+### Start the Frontend
+
+Launch the React development server:
+
+```bash
+npm run dev
+```
+
+The frontend will be available at `http://localhost:5173`
+
+### Access the Dashboard
+
+Open your browser and navigate to:
+
+```
+http://localhost:5173
+```
+
+You should see the SAFI ControlHub dashboard.
+
+</Steps>
+
+## Verify Live Telemetry
+
+Once both servers are running, the WebSocket connection will automatically:
+
+1. **Connect** to the backend on port 3000
+2. **Load initial data** from all telemetry tables
+3. **Stream updates** in real-time:
+   - Main telemetry data (100ms intervals)
+   - Battery status (5s intervals)
+   - Test bench data (500ms intervals)
+   - Laniakea mission data (200ms intervals)
+
+<CodeGroup>
+
+```javascript WebSocket Channels
+// Channels emitting real-time data:
+"nuevos-datos"        // Main telemetry (AKBAL-II)
+"banco-datos"         // Test bench data
+"xitzin2-datos"       // XITZIN-II telemetry
+"baterias"            // Battery status
+"xitzin2-baterias"    // XITZIN-II batteries
+"laniakea"            // Laniakea mission data
+"ignicion-estado"     // Ignition commands
+```
+
+```bash Test API Endpoints
+# Check database connection
+curl http://localhost:3000/api/ping
+
+# Get telemetry data
+curl http://localhost:3000/api/data
+
+# Get battery status
+curl http://localhost:3000/api/batteries
+
+# Get Laniakea data
+curl http://localhost:3000/api/laniakea
+```
+
+</CodeGroup>
+
+## Send Test Data
+
+To verify the full pipeline, send test telemetry:
+
+```bash
+curl -X POST http://localhost:3000/api/data \
+  -H "Content-Type: application/json" \
+  -d '{"temperature": 25.5, "pressure": 101.3}'
+```
+
+You should see the data appear in the dashboard immediately via WebSocket.
+
+## Next Steps
 
 <CardGroup cols={2}>
 
-<Card title="Write Content" icon="pen-to-square" href="/essentials/markdown">
-  Learn MDX syntax and start writing your documentation.
+<Card title="Installation Guide" icon="download" href="/installation">
+  Complete installation instructions and production deployment
 </Card>
 
-<Card title="Customize style" icon="palette" href="/essentials/settings">
-  Make your docs match your brand perfectly.
+<Card title="API Reference" icon="code" href="/api/overview">
+  Explore all available endpoints and WebSocket events
 </Card>
 
-<Card title="Add code examples" icon="square-code" href="/essentials/code">
-  Include syntax-highlighted code blocks.
+<Card title="Configure Devices" icon="microchip" href="/devices/overview">
+  Set up serial devices and configure data sources
 </Card>
 
-<Card title="API documentation" icon="code" href="/api-reference/introduction">
-  Auto-generate API docs from OpenAPI specs.
+<Card title="Dashboard Guide" icon="chart-line" href="/features/dashboard">
+  Learn how to use the monitoring interface
 </Card>
 
 </CardGroup>
 
-<Note>
-  **Need help?** See our [full documentation](https://mintlify.com/docs) or join our [community](https://mintlify.com/community).
-</Note>
+## Troubleshooting
+
+### Database Connection Failed
+
+If you see `Database connected` not appearing:
+
+1. Verify PostgreSQL is running: `pg_isready`
+2. Check credentials in `.env` file
+3. Ensure database exists: `psql -l | grep rocket_data`
+
+### WebSocket Not Connecting
+
+If the frontend can't connect:
+
+1. Verify backend is running on port 3000
+2. Check CORS configuration in `src/app.js:17`
+3. Ensure your origin is in the `allowedOrigins` array
+
+### Port Already in Use
+
+If port 3000 or 5173 is occupied:
+
+```bash
+# Backend
+PORT=3001 npm run dev
+
+# Frontend
+vite --port 5174
+```
+
+Update the `ORIGIN` environment variable accordingly.

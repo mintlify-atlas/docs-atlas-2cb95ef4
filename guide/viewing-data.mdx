@@ -1,0 +1,703 @@
+---
+title: Viewing & Interpreting Data
+description: Understanding telemetry displays, charts, and data visualization in SAFI ControlHub
+---
+
+## Overview
+
+SAFI ControlHub provides comprehensive data visualization tools to help you understand device performance, mission progress, and system health. This guide explains how to read and interpret the various data displays.
+
+## Dashboard Layout
+
+Each device has a custom dashboard optimized for its specific telemetry:
+
+### Common Elements
+
+All dashboards include:
+
+- **Header** - Device name and mission identifier
+- **Real-time Metrics** - Numeric displays of current values
+- **Charts** - Time-series graphs of key parameters
+- **Status Indicators** - Visual feedback on system state
+- **Control Panels** - Command execution (admin only)
+
+<Note>
+Dashboards use a SpaceX-inspired dark theme (#0A192F background, #61DAFB accents) for optimal visibility in control rooms.
+</Note>
+
+## XITZIN-II Data Displays
+
+### Live Telemetry View
+
+The comprehensive telemetry dashboard shows all flight parameters:
+
+#### Current Location Map
+
+**Location:** Left column, top panel
+
+**What it shows:**
+- OpenStreetMap view centered on rocket position
+- Blue marker at current GPS coordinates
+- Zoom level automatically optimized
+
+**How to use:**
+<Steps>
+  <Step title="View Position">
+    The map automatically centers on the latest GPS coordinates.
+  </Step>
+  
+  <Step title="Check Coordinates">
+    Click the marker to see exact latitude/longitude in a popup.
+  </Step>
+  
+  <Step title="Track Movement">
+    Watch the marker move in real-time as position updates arrive.
+  </Step>
+</Steps>
+
+<Tip>
+The map view is set to zoom level 22 for high detail. You can zoom out manually if you need broader context.
+</Tip>
+
+#### Battery Status Panel
+
+**Location:** Left column, bottom panel
+
+**What it shows:**
+Up to 5 battery modules with:
+- Battery ID number
+- Percentage charge (0-100%)
+- Voltage reading (V)
+- Temperature (°C)
+
+**Reading the display:**
+
+```
+Battery ID: 1
+Battery Level: [████████░░] 85%
+Voltage: 4.15 V
+Temperature: 23 °C
+```
+
+**Color indicators:**
+- **Blue bar** - Battery level above 50% (healthy)
+- **Red bar** - Battery level below 50% (low charge)
+
+<Warning>
+If any battery shows red status or temperature above 40°C, monitor closely for potential issues.
+</Warning>
+
+#### Telemetry Charts
+
+**Location:** Right column, top row
+
+Four line charts display time-series data:
+
+1. **Altitude Chart**
+   - Y-axis: Altitude in meters
+   - X-axis: Data point sequence (right = newest)
+   - Color: Cyan (#61DAFB)
+   - Shows: Vertical position over time
+
+2. **Velocity Chart**
+   - Y-axis: Velocity in km/h
+   - X-axis: Data point sequence
+   - Color: Cyan (#61DAFB)
+   - Shows: Speed changes during flight
+
+3. **Pressure Chart**
+   - Y-axis: Atmospheric pressure in Pascals
+   - X-axis: Data point sequence
+   - Color: Cyan (#61DAFB)
+   - Shows: Pressure variation with altitude
+
+4. **Temperature Chart**
+   - Y-axis: Temperature in °C
+   - X-axis: Data point sequence
+   - Color: Cyan (#61DAFB)
+   - Shows: External temperature changes
+
+**Reading the charts:**
+
+<Steps>
+  <Step title="Identify Scale">
+    Check the Y-axis labels for the value range.
+  </Step>
+  
+  <Step title="Follow the Line">
+    Trace the line from right (oldest) to left (newest).
+  </Step>
+  
+  <Step title="Note Trends">
+    Look for patterns:
+    - Steady increase = ascent phase
+    - Peak = apogee reached
+    - Steady decrease = descent phase
+  </Step>
+</Steps>
+
+<Note>
+Charts automatically scale their Y-axis to show the full range of received data. Maximum value is shown at the top.
+</Note>
+
+#### Real-Time Data Panel
+
+**Location:** Right column, middle panel
+
+**What it shows:**
+Latest values for all telemetry parameters:
+
+| Parameter | Description | Units |
+|-----------|-------------|-------|
+| Timestamp | Date and time of measurement | YYYY-MM-DD HH:MM:SS |
+| Latitude | GPS north-south position | Decimal degrees |
+| Longitude | GPS east-west position | Decimal degrees |
+| Velocity | Current speed | km/h |
+| Altitude | Height above ground | meters |
+| Temperature | External air temperature | °C |
+| Pressure | Atmospheric pressure | Pascals |
+| CONOPS | Mission state number | 0-5 |
+
+**Display format:**
+
+```
+Latitude:        19.41234
+Longitude:       -99.56789
+Velocity (km/h): 245
+Altitude (m):    1523
+Temperature(°C): -12
+Pressure:        75432
+CONOPS:          2
+```
+
+<Tip>
+If any value shows "N/A", that sensor is not currently reporting data. Check the WebSocket connection.
+</Tip>
+
+#### Flight Phases Table
+
+**Location:** Right column, bottom panel
+
+**What it shows:**
+Mission progress through six defined phases:
+
+| Phase | Status | Description |
+|-------|--------|-------------|
+| Preflight | Active/Inactive | On launch pad, systems armed |
+| Lift-off | Active/Inactive | Launch and powered ascent |
+| Apogee | Active/Inactive | Peak altitude achieved |
+| Drogue | Active/Inactive | Drogue parachute deployed |
+| Main | Active/Inactive | Main parachute deployed |
+| Land | Active/Inactive | Touchdown completed |
+
+**Reading the table:**
+- **Blue row** - Currently active phase
+- **Dark row** - Inactive phases
+- **Status column** - "Active" or "Inactive"
+
+**Normal progression:**
+```
+Preflight → Lift-off → Apogee → Drogue → Main → Land
+```
+
+<Warning>
+If phases skip or go backward (e.g., Apogee → Lift-off), this may indicate a sensor fault or unexpected flight condition.
+</Warning>
+
+### Live View Dashboard
+
+Enhanced visualization with video and 3D displays:
+
+#### Video Feed
+
+**Location:** Center panel (largest display)
+
+**What it shows:**
+- Live video stream from rocket cameras or ground stations
+- YouTube embed or image display
+- Feed switcher button below video
+
+**Using the feed:**
+
+<Steps>
+  <Step title="Watch Live">
+    Video plays automatically when available.
+  </Step>
+  
+  <Step title="Switch Feeds">
+    Click "Cambiar Feed" to cycle through:
+    - Camera angle 1
+    - Camera angle 2  
+    - Standby image (when offline)
+  </Step>
+</Steps>
+
+#### Altitude Visualization
+
+**Location:** Right column, top panel
+
+**What it shows:**
+Vertical altimeter with:
+- Current altitude in large numbers
+- Scale markers (major: 10m, minor: 2m)
+- Blue pointer indicator
+- Auto-scaling range (±100m from current)
+
+**Reading the altimeter:**
+
+```
+        Altitude (m)
+            |
+       1530 ━━  ← Major tick (10m)
+       1528 ─   ← Minor tick (2m)  
+       1526 ─
+       1524 ─
+  [1523] ━━━▶    ← Current altitude with pointer
+       1522 ─
+       1520 ━━
+```
+
+<Tip>
+The altimeter automatically scrolls to keep the current altitude centered, just like a real aircraft instrument.
+</Tip>
+
+#### 3D Rocket Orientation
+
+**Location:** Right column, middle panel
+
+**What it shows:**
+- 3D model of XITZIN-II rocket
+- Real-time attitude (pitch and roll)
+- Animated rotation based on accelerometer data
+
+**Understanding orientation:**
+- **Vertical** - Rocket pointing up (normal ascent)
+- **Tilted** - Angle shows pitch/roll attitude
+- **Oscillating** - Motion indicates rotation or tumbling
+
+<Note>
+The 3D model uses Three.js with WebGL rendering. Smooth animation indicates good data reception.
+</Note>
+
+## Test Bench Data Displays
+
+### Banco de Pruebas Dashboard
+
+Static fire test monitoring with three primary metrics:
+
+#### Force Chart
+
+**What it shows:**
+- Thrust force produced by the engine
+- Measured in Newtons-seconds (Ns)
+- Color: Cyan (#61DAFB)
+
+**Typical thrust curve:**
+
+```
+Force (Ns)
+  |
+  │     ┌─────┐
+  │    ╱       ╲
+  │   ╱         ╲
+  │  ╱           ╲___
+  └─────────────────── Time
+   ^   ^    ^    ^
+   │   │    │    └─ Shutdown/decay
+   │   │    └───── Steady burn
+   │   └───────── Peak thrust
+   └───────────── Ignition
+```
+
+**Reading force data:**
+1. **Baseline** - Should be near 0 Ns before ignition
+2. **Spike** - Rapid rise at ignition
+3. **Plateau** - Steady thrust during burn
+4. **Decay** - Gradual decrease after shutdown
+
+<Tip>
+Integrate the force curve (area under the curve) to calculate total impulse of the burn.
+</Tip>
+
+#### Temperature Chart
+
+**What it shows:**
+- Engine or chamber temperature
+- Measured in degrees Celsius (°C)
+- Color: Green (#50C878)
+
+**Temperature profile:**
+```
+Temp (°C)
+  |
+  │            ┌────
+  │         ╱─╯
+  │       ╱
+  │    ╱─╯
+  │___╯
+  └─────────────────── Time
+```
+
+**Key points:**
+- **Pre-ignition** - Ambient temperature (15-25°C)
+- **Ignition** - Rapid rise
+- **Peak** - Maximum combustion temperature
+- **Post-burn** - Slow cooling
+
+<Warning>
+If temperature exceeds design limits (varies by engine, typically >500°C for small motors), emergency shutdown may be required.
+</Warning>
+
+#### Pressure Chart
+
+**What it shows:**
+- Combustion chamber pressure
+- Measured in pounds per square inch (Psi)
+- Color: Orange (#FFB74D)
+
+**Pressure behavior:**
+```
+Pressure (Psi)
+  |
+  │   ┌────────┐
+  │  ╱        ╲
+  │ ╱          ╲
+  │╱            ╲__
+  └─────────────────── Time
+```
+
+**Interpretation:**
+- **Atmospheric** - ~14.7 Psi before ignition
+- **Pressurization** - Rapid rise during ignition
+- **Operating pressure** - Steady plateau
+- **Depressurization** - Return to atmospheric
+
+<Note>
+Pressure curve should closely follow force curve. Divergence may indicate nozzle issues or combustion instability.
+</Note>
+
+### Real-Time Metrics Panel
+
+**Location:** Right sidebar, top section
+
+**What it shows:**
+Current values for all three parameters:
+
+```
+FUERZA: 1234.56 Ns
+PRESION: 345.67 Psi
+TEMPERATURA: 456.78 °C
+```
+
+**Color coding:**
+- Each metric uses its chart color
+- Large font (H5 size) for easy reading
+- Updates multiple times per second
+
+### Maximum Values Panel
+
+**Location:** Right sidebar, middle section
+
+**What it shows:**
+Peak values recorded during the session:
+
+```
+Máx FUERZA: 2345.67 Ns
+Máx PRESION: 456.78 Psi
+Máx TEMPERATURA: 567.89 °C
+```
+
+**Use cases:**
+- **Performance verification** - Compare to design specs
+- **Safety monitoring** - Ensure within limits
+- **Test documentation** - Record peak performance
+
+<Tip>
+Screenshot the maximum values panel immediately after a test for your records.
+</Tip>
+
+## Data Quality Indicators
+
+### Valid Data
+
+**Indicators of good data:**
+- ✓ Timestamp updating regularly
+- ✓ Charts drawing smooth lines
+- ✓ Values within expected ranges
+- ✓ No "N/A" displays
+- ✓ Map marker at valid coordinates
+
+### Data Issues
+
+**Warning signs:**
+- ✗ Frozen timestamp (not updating)
+- ✗ "N/A" in multiple fields
+- ✗ Charts not drawing
+- ✗ Coordinates at 0, 0
+- ✗ Unrealistic values (altitude: -9999)
+
+<Warning>
+If you see persistent "N/A" values or frozen timestamps, the WebSocket connection may be lost. Refresh the page to reconnect.
+</Warning>
+
+## Understanding Graphs
+
+### Time Series Charts
+
+All ControlHub charts use D3.js for rendering:
+
+**Axes:**
+- **X-axis (horizontal)** - Time sequence or data point index
+- **Y-axis (vertical)** - Measured value with units
+
+**Chart features:**
+- **Auto-scaling** - Y-axis adjusts to data range
+- **Grid lines** - Aid in reading values
+- **Title** - Shows parameter name and units
+- **Tick marks** - Numbered intervals on both axes
+
+**Reading technique:**
+
+<Steps>
+  <Step title="Check the Title">
+    Identify which parameter is displayed and its units.
+  </Step>
+  
+  <Step title="Note the Scale">
+    Look at Y-axis labels to understand the value range.
+  </Step>
+  
+  <Step title="Follow the Line">
+    Trace from right (older data) to left (newest data).
+  </Step>
+  
+  <Step title="Identify Patterns">
+    Look for trends, spikes, plateaus, or anomalies.
+  </Step>
+</Steps>
+
+<Note>
+The X-axis shows data point sequence, not absolute time. Check the timestamp display for actual time correlation.
+</Note>
+
+### Chart Patterns
+
+**Ascent (altitude):**
+```
+    ╱
+   ╱
+  ╱
+ ╱
+╱
+```
+Steady upward slope = normal ascent
+
+**Apogee (altitude):**
+```
+  ─┐
+   │
+   └─
+```
+Flat top then decline = peak reached
+
+**Parachute deployment (velocity):**
+```
+╲
+ ╲___
+```
+Sudden flattening = chute opened
+
+**Ignition (force/pressure):**
+```
+    ┌──
+   ╱
+  ╱
+_╱
+```
+Rapid rise to plateau = successful ignition
+
+## Responsive Design
+
+### Desktop View
+
+**Optimal layout:**
+- Multi-column grid with all panels visible
+- Large charts (600-700px width)
+- Side-by-side comparisons
+- Full-resolution map and video
+
+### Mobile View
+
+**Adapted layout:**
+- Stacked single-column display
+- Smaller charts (300px width)
+- Scrollable panels
+- Touch-friendly controls
+
+<Tip>
+For critical operations, use a desktop or large tablet for the best view of all data simultaneously.
+</Tip>
+
+## Data Export
+
+While ControlHub focuses on real-time visualization, you can capture data:
+
+### Browser-Based Export
+
+<Steps>
+  <Step title="Take Screenshots">
+    Use browser screenshot tools (F12 → Device toolbar → Capture screenshot) to save visualizations.
+  </Step>
+  
+  <Step title="Record Video">
+    Use screen recording software to capture live operations.
+  </Step>
+  
+  <Step title="Copy Values">
+    Manually record critical values from real-time displays.
+  </Step>
+</Steps>
+
+### Developer Tools Export
+
+<Steps>
+  <Step title="Open Console">
+    Press F12 and go to Console tab.
+  </Step>
+  
+  <Step title="Access Data">
+    Type `console.log(data)` to see the raw data object.
+  </Step>
+  
+  <Step title="Copy JSON">
+    Right-click the output and select "Copy object" to save raw data.
+  </Step>
+</Steps>
+
+<Note>
+All telemetry data is stored in the backend database. Contact your administrator for historical data exports in CSV or JSON format.
+</Note>
+
+## Best Practices
+
+### Effective Data Monitoring
+
+1. **Watch Multiple Metrics** - Don't focus on just one parameter
+2. **Know Your Baselines** - Understand normal values for each metric
+3. **Spot Anomalies Early** - Look for unexpected changes
+4. **Cross-reference** - Verify data makes sense (e.g., high altitude = low pressure)
+5. **Document Events** - Note timestamps of important occurrences
+
+### Display Setup
+
+**For mission-critical operations:**
+- Use multiple monitors showing different dashboards
+- Keep Live View on main display
+- Show detailed telemetry charts on secondary display
+- Have backup device ready in case of browser issues
+
+<Tip>
+Arrange your workspace so you can see charts, real-time values, and mission phase simultaneously without scrolling.
+</Tip>
+
+### Troubleshooting Display Issues
+
+**Charts not rendering:**
+1. Clear browser cache (Ctrl+Shift+Delete)
+2. Disable browser extensions
+3. Try different browser (Chrome/Firefox recommended)
+4. Check browser console for errors
+
+**Values not updating:**
+1. Check timestamp - if frozen, connection lost
+2. Refresh page to reconnect WebSocket
+3. Verify device is transmitting (check with admin)
+4. Test internet connection speed
+
+**Map not loading:**
+1. Verify GPS coordinates are valid (not 0, 0)
+2. Check internet connection (map tiles load from web)
+3. Try zooming out manually
+4. Clear browser cache and reload
+
+<Warning>
+If critical data is missing during operations, immediately inform the mission director and switch to backup monitoring systems.
+</Warning>
+
+## Interpreting Flight Data
+
+### Normal Flight Profile
+
+**Expected sequence for XITZIN-II:**
+
+1. **Preflight (State 0)**
+   - Altitude: Ground level
+   - Velocity: 0 km/h
+   - Batteries: >80%
+   - GPS: Fixed location
+
+2. **Lift-off (State 1)**
+   - Altitude: Rapidly increasing
+   - Velocity: 0 → 200+ km/h
+   - Acceleration: High positive values
+   - GPS: Moving coordinates
+
+3. **Apogee (State 2)**
+   - Altitude: Maximum (2000-3000m)
+   - Velocity: Approaching 0 km/h
+   - Acceleration: Near zero
+
+4. **Drogue Deploy (State 3)**
+   - Altitude: Decreasing  
+   - Velocity: Sudden reduction
+   - Descent rate: Fast but controlled
+
+5. **Main Deploy (State 4)**
+   - Altitude: Lower (typically below 500m)
+   - Velocity: Further reduced
+   - Descent rate: Slow and steady
+
+6. **Landing (State 5)**
+   - Altitude: Ground level
+   - Velocity: 0 km/h
+   - GPS: Fixed landing coordinates
+
+<Note>
+Actual values vary based on motor selection, payload mass, and weather conditions. Compare to flight simulation predictions.
+</Note>
+
+## Advanced Visualization
+
+### 3D Rocket Model
+
+The Live View includes a GLTF 3D model:
+
+**What it shows:**
+- Rocket geometry and structure
+- Real-time pitch and roll from accelerometer
+- Smooth animation indicating data flow
+
+**Model behavior:**
+- Slow oscillation: Normal sensor data reception
+- Erratic movement: Possible tumbling or instability
+- Frozen: Lost connection to attitude sensors
+
+### Altitude Simulation Mode
+
+**Purpose:** Training and display testing
+
+**What it does:**
+- Simulates complete flight profile
+- 20s ascent to 3000m
+- 2s pause at apogee
+- 20s descent to ground
+
+**Use for:**
+- Training new operators
+- Testing display systems
+- Verifying chart rendering
+- Demonstrating to visitors
+
+<Warning>
+Simulation mode does NOT communicate with real hardware. It's purely for training and testing the visualization system.
+</Warning>

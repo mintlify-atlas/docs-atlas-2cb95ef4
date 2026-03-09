@@ -1,0 +1,869 @@
+---
+title: 'Telemetry Data Endpoints'
+description: 'Endpoints for retrieving and submitting telemetry data from all devices'
+---
+
+## Overview
+
+SAFI ControlHub provides telemetry data endpoints for multiple aerospace systems:
+
+- **AKBAL-II** - Rocket telemetry and battery status
+- **XITZIN-II** - Rocket telemetry and battery status
+- **Banco de Pruebas** - Test bench data
+- **Laniakea** - Laniakea system telemetry
+
+All telemetry endpoints accept and return data in JSON format.
+
+---
+
+## AKBAL-II Telemetry
+
+### Get AKBAL-II Data
+
+Retrieve the latest telemetry data from AKBAL-II (limited to 150 most recent records).
+
+```http
+GET /api/data
+```
+
+#### Response
+
+Returns an array of telemetry records.
+
+<ResponseField name="id" type="integer">
+  Record identifier
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Date in YYYY-MM-DD format
+</ResponseField>
+
+<ResponseField name="time" type="string">
+  Time in HH:MM:SS format
+</ResponseField>
+
+<ResponseField name="altitude" type="number">
+  Altitude measurement
+</ResponseField>
+
+<ResponseField name="temperature" type="number">
+  Temperature measurement
+</ResponseField>
+
+<ResponseField name="pressure" type="number">
+  Pressure measurement
+</ResponseField>
+
+<ResponseField name="velocity" type="number">
+  Velocity measurement
+</ResponseField>
+
+<ResponseField name="latitude" type="number">
+  GPS latitude coordinate
+</ResponseField>
+
+<ResponseField name="longitude" type="number">
+  GPS longitude coordinate
+</ResponseField>
+
+<ResponseField name="accel_x" type="number">
+  Acceleration on X-axis
+</ResponseField>
+
+<ResponseField name="accel_y" type="number">
+  Acceleration on Y-axis
+</ResponseField>
+
+<ResponseField name="accel_z" type="number">
+  Acceleration on Z-axis
+</ResponseField>
+
+<ResponseField name="mission_state" type="number">
+  Current mission state identifier
+</ResponseField>
+
+<ResponseField name="air_brake_angle" type="number">
+  Air brake angle position
+</ResponseField>
+
+#### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:3000/api/data
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/data');
+const data = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get('http://localhost:3000/api/data')
+data = response.json()
+```
+
+</CodeGroup>
+
+#### Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "date": "2026-03-09",
+    "time": "14:30:45",
+    "altitude": 1250.5,
+    "temperature": 22.3,
+    "pressure": 101.3,
+    "velocity": 85.2,
+    "latitude": 19.4326,
+    "longitude": -99.1332,
+    "accel_x": 0.15,
+    "accel_y": -0.05,
+    "accel_z": 9.81,
+    "mission_state": 2,
+    "air_brake_angle": 15.5
+  }
+]
+```
+
+---
+
+### Post AKBAL-II Data
+
+Submit new telemetry data for AKBAL-II.
+
+```http
+POST /api/data
+```
+
+#### Request Body
+
+<ParamField body="timestamp" type="string" required>
+  ISO 8601 timestamp (e.g., "2026-03-09T14:30:45.000Z")
+</ParamField>
+
+<ParamField body="altitude" type="number" required>
+  Altitude measurement
+</ParamField>
+
+<ParamField body="temperature" type="number" required>
+  Temperature measurement
+</ParamField>
+
+<ParamField body="pressure" type="number" required>
+  Pressure measurement
+</ParamField>
+
+<ParamField body="velocity" type="number" required>
+  Velocity measurement
+</ParamField>
+
+<ParamField body="latitude" type="number" required>
+  GPS latitude coordinate
+</ParamField>
+
+<ParamField body="longitude" type="number" required>
+  GPS longitude coordinate
+</ParamField>
+
+<ParamField body="accel_x" type="number" required>
+  Acceleration on X-axis
+</ParamField>
+
+<ParamField body="accel_y" type="number" required>
+  Acceleration on Y-axis
+</ParamField>
+
+<ParamField body="accel_z" type="number" required>
+  Acceleration on Z-axis
+</ParamField>
+
+<ParamField body="mission_state" type="number" required>
+  Current mission state identifier
+</ParamField>
+
+<ParamField body="air_brake_angle" type="number" required>
+  Air brake angle position
+</ParamField>
+
+#### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:3000/api/data \
+  -H "Content-Type: application/json" \
+  -d '{
+    "timestamp": "2026-03-09T14:30:45.000Z",
+    "altitude": 1250.5,
+    "temperature": 22.3,
+    "pressure": 101.3,
+    "velocity": 85.2,
+    "latitude": 19.4326,
+    "longitude": -99.1332,
+    "accel_x": 0.15,
+    "accel_y": -0.05,
+    "accel_z": 9.81,
+    "mission_state": 2,
+    "air_brake_angle": 15.5
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/data', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    timestamp: new Date().toISOString(),
+    altitude: 1250.5,
+    temperature: 22.3,
+    pressure: 101.3,
+    velocity: 85.2,
+    latitude: 19.4326,
+    longitude: -99.1332,
+    accel_x: 0.15,
+    accel_y: -0.05,
+    accel_z: 9.81,
+    mission_state: 2,
+    air_brake_angle: 15.5
+  })
+});
+
+const result = await response.json();
+```
+
+</CodeGroup>
+
+#### Example Response
+
+```json
+{
+  "id": 151,
+  "date": "2026-03-09",
+  "time": "14:30:45",
+  "altitude": 1250.5,
+  "temperature": 22.3,
+  "pressure": 101.3,
+  "velocity": 85.2,
+  "latitude": 19.4326,
+  "longitude": -99.1332,
+  "accel_x": 0.15,
+  "accel_y": -0.05,
+  "accel_z": 9.81,
+  "mission_state": 2,
+  "air_brake_angle": 15.5
+}
+```
+
+---
+
+### Get AKBAL-II Battery Status
+
+Retrieve battery status information for AKBAL-II.
+
+```http
+GET /api/batteries
+```
+
+#### Response
+
+<ResponseField name="battery_id" type="integer">
+  Battery identifier
+</ResponseField>
+
+<ResponseField name="battery_level" type="number">
+  Battery charge level percentage
+</ResponseField>
+
+<ResponseField name="voltage" type="number">
+  Battery voltage
+</ResponseField>
+
+<ResponseField name="temperature" type="number">
+  Battery temperature
+</ResponseField>
+
+<ResponseField name="timestamp" type="string">
+  Last update timestamp
+</ResponseField>
+
+#### Example Request
+
+```bash cURL
+curl http://localhost:3000/api/batteries
+```
+
+#### Example Response
+
+```json
+[
+  {
+    "battery_id": 1,
+    "battery_level": 87.5,
+    "voltage": 12.6,
+    "temperature": 28.3,
+    "timestamp": "2026-03-09T14:30:45.000Z"
+  }
+]
+```
+
+---
+
+### Update AKBAL-II Battery Status
+
+Update battery status for AKBAL-II.
+
+```http
+POST /api/batteries
+```
+
+#### Request Body
+
+<ParamField body="battery_id" type="integer" required>
+  Battery identifier
+</ParamField>
+
+<ParamField body="battery_level" type="number" required>
+  Battery charge level percentage
+</ParamField>
+
+<ParamField body="voltage" type="number" required>
+  Battery voltage
+</ParamField>
+
+<ParamField body="temperature" type="number" required>
+  Battery temperature
+</ParamField>
+
+#### Example Request
+
+```bash cURL
+curl -X POST http://localhost:3000/api/batteries \
+  -H "Content-Type: application/json" \
+  -d '{
+    "battery_id": 1,
+    "battery_level": 87.5,
+    "voltage": 12.6,
+    "temperature": 28.3
+  }'
+```
+
+#### Example Response
+
+```json
+{
+  "battery_id": 1,
+  "battery_level": 87.5,
+  "voltage": 12.6,
+  "temperature": 28.3,
+  "timestamp": "2026-03-09T14:30:45.000Z"
+}
+```
+
+---
+
+## XITZIN-II Telemetry
+
+### Get XITZIN-II Data
+
+Retrieve telemetry data from XITZIN-II.
+
+```http
+GET /api/xitzin2data
+```
+
+The response format is identical to AKBAL-II data (see above).
+
+#### Example Request
+
+```bash cURL
+curl http://localhost:3000/api/xitzin2data
+```
+
+---
+
+### Post XITZIN-II Data
+
+Submit new telemetry data for XITZIN-II.
+
+```http
+POST /api/xitzin2data
+```
+
+Request body format is identical to AKBAL-II data submission (see above).
+
+#### Example Request
+
+```bash cURL
+curl -X POST http://localhost:3000/api/xitzin2data \
+  -H "Content-Type: application/json" \
+  -d '{
+    "timestamp": "2026-03-09T14:30:45.000Z",
+    "altitude": 2100.8,
+    "temperature": 18.5,
+    "pressure": 95.2,
+    "velocity": 120.5,
+    "latitude": 19.4326,
+    "longitude": -99.1332,
+    "accel_x": 0.25,
+    "accel_y": -0.15,
+    "accel_z": 9.81,
+    "mission_state": 3,
+    "air_brake_angle": 22.0
+  }'
+```
+
+---
+
+### Get XITZIN-II Battery Status
+
+Retrieve battery status information for XITZIN-II.
+
+```http
+GET /api/xitzin2batteries
+```
+
+#### Example Request
+
+```bash cURL
+curl http://localhost:3000/api/xitzin2batteries
+```
+
+---
+
+### Update XITZIN-II Battery Status
+
+Update battery status for XITZIN-II.
+
+```http
+POST /api/xitzin2batteries
+```
+
+Request format is identical to AKBAL-II battery updates.
+
+#### Example Request
+
+```bash cURL
+curl -X POST http://localhost:3000/api/xitzin2batteries \
+  -H "Content-Type: application/json" \
+  -d '{
+    "battery_id": 2,
+    "battery_level": 92.3,
+    "voltage": 12.8,
+    "temperature": 26.1
+  }'
+```
+
+---
+
+## Banco de Pruebas (Test Bench)
+
+### Get Test Bench Data
+
+Retrieve the latest 100 test bench records (ordered by most recent).
+
+```http
+GET /api/bancodepruebas
+```
+
+#### Response
+
+<ResponseField name="id" type="integer">
+  Record identifier
+</ResponseField>
+
+<ResponseField name="id_prueba" type="integer">
+  Test identifier
+</ResponseField>
+
+<ResponseField name="fuerza" type="number">
+  Force measurement
+</ResponseField>
+
+<ResponseField name="temperatura" type="number">
+  Temperature measurement
+</ResponseField>
+
+<ResponseField name="presion" type="number">
+  Pressure measurement
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Date in YYYY-MM-DD format
+</ResponseField>
+
+<ResponseField name="time" type="string">
+  Time in HH:MM:SS format
+</ResponseField>
+
+#### Example Request
+
+```bash cURL
+curl http://localhost:3000/api/bancodepruebas
+```
+
+#### Example Response
+
+```json
+[
+  {
+    "id": 50,
+    "id_prueba": 5,
+    "fuerza": 1500.5,
+    "temperatura": 850.3,
+    "presion": 120.5,
+    "date": "2026-03-09",
+    "time": "14:30:45"
+  }
+]
+```
+
+---
+
+### Post Test Bench Data
+
+Submit new test bench data.
+
+```http
+POST /api/bancodepruebas
+```
+
+#### Request Body
+
+<ParamField body="id_prueba" type="integer" required>
+  Test identifier
+</ParamField>
+
+<ParamField body="fuerza" type="number" required>
+  Force measurement
+</ParamField>
+
+<ParamField body="temperatura" type="number" required>
+  Temperature measurement
+</ParamField>
+
+<ParamField body="presion" type="number" required>
+  Pressure measurement
+</ParamField>
+
+<Note>
+The date and time are automatically set to the server's current timestamp when the data is received.
+</Note>
+
+#### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:3000/api/bancodepruebas \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id_prueba": 5,
+    "fuerza": 1500.5,
+    "temperatura": 850.3,
+    "presion": 120.5
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/bancodepruebas', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    id_prueba: 5,
+    fuerza: 1500.5,
+    temperatura: 850.3,
+    presion: 120.5
+  })
+});
+
+const result = await response.json();
+```
+
+</CodeGroup>
+
+#### Example Response
+
+```json
+{
+  "id": 51,
+  "id_prueba": 5,
+  "fuerza": 1500.5,
+  "temperatura": 850.3,
+  "presion": 120.5,
+  "date": "2026-03-09",
+  "time": "14:30:45"
+}
+```
+
+---
+
+## Laniakea Telemetry
+
+### Get Laniakea Data
+
+Retrieve the latest 100 Laniakea telemetry records (ordered by most recent date and time).
+
+```http
+GET /api/laniakea
+```
+
+#### Response
+
+<ResponseField name="id" type="integer">
+  Record identifier
+</ResponseField>
+
+<ResponseField name="date" type="string">
+  Date in YYYY-MM-DD format
+</ResponseField>
+
+<ResponseField name="time" type="string">
+  Time in HH:MM:SS format
+</ResponseField>
+
+<ResponseField name="latitud" type="number">
+  GPS latitude coordinate
+</ResponseField>
+
+<ResponseField name="longitud" type="number">
+  GPS longitude coordinate
+</ResponseField>
+
+<ResponseField name="aceleracion" type="number">
+  Total acceleration magnitude
+</ResponseField>
+
+<ResponseField name="accel_x" type="number">
+  Acceleration on X-axis
+</ResponseField>
+
+<ResponseField name="accel_y" type="number">
+  Acceleration on Y-axis
+</ResponseField>
+
+<ResponseField name="accel_z" type="number">
+  Acceleration on Z-axis
+</ResponseField>
+
+<ResponseField name="altitud" type="number">
+  Altitude measurement
+</ResponseField>
+
+<ResponseField name="conops" type="number">
+  Concept of operations state (optional)
+</ResponseField>
+
+<ResponseField name="voltaje" type="number">
+  Voltage measurement (optional)
+</ResponseField>
+
+<ResponseField name="corriente" type="number">
+  Current measurement (optional)
+</ResponseField>
+
+#### Example Request
+
+```bash cURL
+curl http://localhost:3000/api/laniakea
+```
+
+#### Example Response
+
+```json
+[
+  {
+    "id": 25,
+    "date": "2026-03-09",
+    "time": "14:30:45",
+    "latitud": 19.4326,
+    "longitud": -99.1332,
+    "aceleracion": 9.85,
+    "accel_x": 0.12,
+    "accel_y": -0.08,
+    "accel_z": 9.81,
+    "altitud": 2240.5,
+    "conops": 1,
+    "voltaje": 12.5,
+    "corriente": 2.3
+  }
+]
+```
+
+---
+
+### Post Laniakea Data
+
+Submit new telemetry data for Laniakea.
+
+```http
+POST /api/laniakea
+```
+
+#### Request Body
+
+<ParamField body="timestamp" type="string" required>
+  ISO 8601 timestamp (e.g., "2026-03-09T14:30:45.000Z")
+</ParamField>
+
+<ParamField body="latitud" type="number" required>
+  GPS latitude coordinate
+</ParamField>
+
+<ParamField body="longitud" type="number" required>
+  GPS longitude coordinate
+</ParamField>
+
+<ParamField body="aceleracion" type="number" required>
+  Total acceleration magnitude
+</ParamField>
+
+<ParamField body="accel_x" type="number" required>
+  Acceleration on X-axis
+</ParamField>
+
+<ParamField body="accel_y" type="number" required>
+  Acceleration on Y-axis
+</ParamField>
+
+<ParamField body="accel_z" type="number" required>
+  Acceleration on Z-axis
+</ParamField>
+
+<ParamField body="altitud" type="number" required>
+  Altitude measurement
+</ParamField>
+
+<ParamField body="conops" type="number">
+  Concept of operations state (optional)
+</ParamField>
+
+<ParamField body="voltaje" type="number">
+  Voltage measurement (optional)
+</ParamField>
+
+<ParamField body="corriente" type="number">
+  Current measurement (optional)
+</ParamField>
+
+#### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:3000/api/laniakea \
+  -H "Content-Type: application/json" \
+  -d '{
+    "timestamp": "2026-03-09T14:30:45.000Z",
+    "latitud": 19.4326,
+    "longitud": -99.1332,
+    "aceleracion": 9.85,
+    "accel_x": 0.12,
+    "accel_y": -0.08,
+    "accel_z": 9.81,
+    "altitud": 2240.5,
+    "conops": 1,
+    "voltaje": 12.5,
+    "corriente": 2.3
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/laniakea', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    timestamp: new Date().toISOString(),
+    latitud: 19.4326,
+    longitud: -99.1332,
+    aceleracion: 9.85,
+    accel_x: 0.12,
+    accel_y: -0.08,
+    accel_z: 9.81,
+    altitud: 2240.5,
+    conops: 1,
+    voltaje: 12.5,
+    corriente: 2.3
+  })
+});
+
+const result = await response.json();
+```
+
+</CodeGroup>
+
+#### Example Response
+
+```json
+{
+  "message": "Datos insertados correctamente en datos_laniakea.",
+  "data": {
+    "id": 26,
+    "date": "2026-03-09",
+    "time": "14:30:45",
+    "latitud": 19.4326,
+    "longitud": -99.1332,
+    "aceleracion": 9.85,
+    "accel_x": 0.12,
+    "accel_y": -0.08,
+    "accel_z": 9.81,
+    "altitud": 2240.5,
+    "conops": 1,
+    "voltaje": 12.5,
+    "corriente": 2.3
+  }
+}
+```
+
+---
+
+## Error Handling
+
+All data endpoints return consistent error responses:
+
+### 400 Bad Request
+
+Returned when required parameters are missing:
+
+```json
+{
+  "message": "Faltan parámetros en la solicitud."
+}
+```
+
+Or for Laniakea:
+
+```json
+{
+  "message": "Faltan parámetros obligatorios en la solicitud."
+}
+```
+
+### 500 Internal Server Error
+
+Returned when database operations fail:
+
+```json
+{
+  "message": "Error al obtener los datos."
+}
+```
+
+Or:
+
+```json
+{
+  "message": "Error al insertar los datos."
+}
+```

@@ -1,0 +1,432 @@
+---
+title: 'Authentication'
+description: 'Authentication endpoints and JWT token management'
+---
+
+## Overview
+
+SAFI ControlHub uses JWT (JSON Web Token) based authentication with HTTP-only cookies. Tokens are valid for 24 hours after sign-in.
+
+## Authentication Flow
+
+1. **Sign up** or **sign in** to receive a JWT token
+2. Token is automatically stored in an HTTP cookie
+3. Subsequent requests include the cookie automatically
+4. Protected endpoints verify the token via the `isAuth` middleware
+
+## Sign In
+
+Authenticate an existing user and receive a JWT token.
+
+```http
+POST /api/signin
+```
+
+### Request Body
+
+<ParamField body="email" type="string" required>
+  User's email address (must be a valid email format)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password (minimum 6 characters, maximum 255 characters)
+</ParamField>
+
+### Response
+
+Returns the user object and sets a JWT token cookie.
+
+<ResponseField name="id" type="integer">
+  User's unique identifier
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  User's display name
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="gravatar" type="string">
+  User's Gravatar URL (generated from email MD5 hash)
+</ResponseField>
+
+<ResponseField name="level" type="integer">
+  User's permission level
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:3000/api/signin \
+  -H "Content-Type: application/json" \
+  -d '{
+    "email": "user@example.com",
+    "password": "mypassword123"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/signin', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include', // Important for cookie handling
+  body: JSON.stringify({
+    email: 'user@example.com',
+    password: 'mypassword123'
+  })
+});
+
+const user = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'http://localhost:3000/api/signin',
+    json={
+        'email': 'user@example.com',
+        'password': 'mypassword123'
+    }
+)
+
+user = response.json()
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": 1,
+  "username": "John Doe",
+  "email": "user@example.com",
+  "gravatar": "https://www.gravatar.com/avatar/5d41402abc4b2a76b9719d911017c592",
+  "level": 2
+}
+```
+
+### Error Responses
+
+<ResponseField name="400">
+  **Email not registered**: `{"message": "El correo no esta registrado"}`
+  
+  **Incorrect password**: `{"message": "La contraseña es incorrecta"}`
+</ResponseField>
+
+---
+
+## Sign Up
+
+Create a new user account.
+
+```http
+POST /api/signup
+```
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  User's display name (1-255 characters)
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  User's email address (must be valid email format)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User's password (minimum 6 characters, maximum 255 characters)
+</ParamField>
+
+<ParamField body="level" type="integer" required>
+  User's permission level
+</ParamField>
+
+### Response
+
+Returns the newly created user object and sets a JWT token cookie.
+
+<ResponseField name="id" type="integer">
+  User's unique identifier
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  User's display name
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="gravatar" type="string">
+  Auto-generated Gravatar URL based on email
+</ResponseField>
+
+<ResponseField name="level" type="integer">
+  User's permission level
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:3000/api/signup \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "John Doe",
+    "email": "john@example.com",
+    "password": "securepass123",
+    "level": 1
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/signup', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    name: 'John Doe',
+    email: 'john@example.com',
+    password: 'securepass123',
+    level: 1
+  })
+});
+
+const user = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": 5,
+  "username": "John Doe",
+  "email": "john@example.com",
+  "gravatar": "https://www.gravatar.com/avatar/d4c74594d841139328695756648b6bd6",
+  "level": 1
+}
+```
+
+### Error Responses
+
+<ResponseField name="400">
+  **Email already registered**: `{"message": "El correo ya esta registrado"}`
+</ResponseField>
+
+---
+
+## Update User
+
+Update an existing user's information.
+
+```http
+POST /api/edituser/:id
+```
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  User ID to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  Updated display name (1-255 characters)
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Updated email address
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  Updated password (minimum 6 characters)
+</ParamField>
+
+<ParamField body="level" type="integer" required>
+  Updated permission level
+</ParamField>
+
+### Example Request
+
+```bash cURL
+curl -X POST http://localhost:3000/api/edituser/5 \
+  -H "Content-Type: application/json" \
+  -d '{
+    "name": "Jane Doe",
+    "email": "jane@example.com",
+    "password": "newpassword123",
+    "level": 2
+  }'
+```
+
+### Example Response
+
+```json
+{
+  "id": 5,
+  "username": "Jane Doe",
+  "email": "jane@example.com",
+  "gravatar": "https://www.gravatar.com/avatar/8b1a9953c4611296a827abf8c47804d7",
+  "level": 2
+}
+```
+
+---
+
+## Sign Out
+
+Sign out the current user by clearing the authentication cookie.
+
+```http
+POST /api/signout
+```
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:3000/api/signout \
+  --cookie "token=your-jwt-token"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/signout', {
+  method: 'POST',
+  credentials: 'include'
+});
+
+// Returns 200 OK with no body
+```
+
+</CodeGroup>
+
+### Response
+
+Returns `200 OK` with no response body. The authentication cookie is cleared.
+
+---
+
+## Get Profile
+
+Retrieve the currently authenticated user's profile.
+
+```http
+GET /api/profile
+```
+
+<Note>
+This endpoint requires authentication. The JWT token cookie must be included in the request.
+</Note>
+
+### Authentication
+
+Requires valid JWT token in cookie. The token is automatically included if using `credentials: 'include'`.
+
+### Response
+
+<ResponseField name="id" type="integer">
+  User's unique identifier
+</ResponseField>
+
+<ResponseField name="username" type="string">
+  User's display name
+</ResponseField>
+
+<ResponseField name="email" type="string">
+  User's email address
+</ResponseField>
+
+<ResponseField name="gravatar" type="string">
+  User's Gravatar URL
+</ResponseField>
+
+<ResponseField name="level" type="integer">
+  User's permission level
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:3000/api/profile \
+  --cookie "token=your-jwt-token"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/profile', {
+  credentials: 'include'
+});
+
+const profile = await response.json();
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+{
+  "id": 1,
+  "username": "John Doe",
+  "email": "user@example.com",
+  "gravatar": "https://www.gravatar.com/avatar/5d41402abc4b2a76b9719d911017c592",
+  "level": 2
+}
+```
+
+### Error Responses
+
+<ResponseField name="401">
+  **No token provided**: `{"message": "No estas autorizado"}`
+  
+  **Invalid token**: `{"message": "No estas autorizado"}`
+</ResponseField>
+
+---
+
+## JWT Token Details
+
+### Token Payload
+
+JWT tokens contain the following payload:
+
+```json
+{
+  "id": 1,
+  "iat": 1678377600,
+  "exp": 1678464000
+}
+```
+
+- **id**: User's unique identifier
+- **iat**: Issued at timestamp
+- **exp**: Expiration timestamp (24 hours from issue)
+
+### Token Storage
+
+Tokens are stored in HTTP cookies with the following settings:
+
+- **Name**: `token`
+- **Secure**: `true` (HTTPS only in production)
+- **SameSite**: `none`
+- **Max Age**: 24 hours (86,400,000 milliseconds)
+
+<Warning>
+The JWT secret key is currently hardcoded as `"xyz123"` in the source code. For production deployments, this should be moved to an environment variable and set to a strong, random secret.
+</Warning>

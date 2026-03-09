@@ -1,0 +1,112 @@
+---
+title: 'REST API Overview'
+description: 'Overview of the SAFI ControlHub REST API'
+---
+
+## Introduction
+
+The SAFI ControlHub REST API provides programmatic access to telemetry data, device control, user management, and task management for aerospace systems including AKBAL-II, XITZIN-II, Banco de Pruebas, and Laniakea.
+
+## Base URL
+
+All API endpoints are relative to the base URL:
+
+```
+http://localhost:3000/api
+```
+
+For production deployments, replace `localhost:3000` with your server's domain and port.
+
+## API Architecture
+
+The API is organized into the following resource groups:
+
+### Authentication & Users
+- **Authentication** - Sign in, sign up, sign out, and profile management
+- **Users** - User management and access logs
+
+### Telemetry & Data
+- **AKBAL-II Data** - Telemetry data and battery status for AKBAL-II
+- **XITZIN-II Data** - Telemetry data and battery status for XITZIN-II
+- **Banco de Pruebas** - Test bench telemetry data
+- **Laniakea** - Laniakea system telemetry data
+
+### Device Control
+- **Ignition Control** - Send ignition commands to test bench systems
+
+### Tasks
+- **Task Management** - Create, read, update, and delete tasks
+
+## Request Format
+
+All POST and PUT requests should use JSON format with the `Content-Type: application/json` header.
+
+```bash
+curl -X POST http://localhost:3000/api/signin \
+  -H "Content-Type: application/json" \
+  -d '{"email": "user@example.com", "password": "password123"}'
+```
+
+## Response Format
+
+All API responses are returned in JSON format. Successful responses typically return:
+
+- **200 OK** - Request succeeded, data returned
+- **201 Created** - Resource created successfully
+- **204 No Content** - Request succeeded with no response body
+
+Error responses include:
+
+- **400 Bad Request** - Invalid request parameters
+- **401 Unauthorized** - Authentication required or invalid
+- **404 Not Found** - Resource not found
+- **409 Conflict** - Resource already exists
+- **500 Internal Server Error** - Server error
+
+### Error Response Structure
+
+```json
+{
+  "message": "Error description"
+}
+```
+
+## Health Check
+
+Test API connectivity and database connection:
+
+```bash
+curl http://localhost:3000/api/ping
+```
+
+Response:
+```json
+{
+  "now": "2026-03-09T17:30:00.000Z"
+}
+```
+
+## CORS Configuration
+
+The API supports Cross-Origin Resource Sharing (CORS) for the following origins:
+
+- `http://localhost:5173`
+- Additional configured local network addresses
+
+Allowed methods: GET, POST, PUT, DELETE
+
+Credentials (cookies) are supported for authentication.
+
+## Next Steps
+
+<CardGroup cols={2}>
+  <Card title="Authentication" icon="lock" href="/api/authentication">
+    Learn about authentication and JWT tokens
+  </Card>
+  <Card title="Data Endpoints" icon="satellite-dish" href="/api/data-endpoints">
+    Access telemetry data from all devices
+  </Card>
+  <Card title="Device Control" icon="rocket" href="/api/device-control">
+    Send commands to devices
+  </Card>
+</CardGroup>

@@ -1,0 +1,717 @@
+---
+title: 'Production Configuration'
+description: 'Optimize SAFI ControlHub for production performance and security'
+---
+
+## Overview
+
+This guide covers production-specific configuration and optimization for SAFI ControlHub, based on the actual codebase architecture including Express, Socket.IO, PostgreSQL, and Vite.
+
+---
+
+## Environment Configuration
+
+### Backend Environment Variables
+
+Create `/source/.env` with production values:
+
+```bash
+# Server Configuration
+NODE_ENV=production
+PORT=3000
+
+# PostgreSQL Configuration (from src/config.js:1-9)
+PG_HOST=your-postgres-host.com
+PG_PORT=5432
+PG_USER=safi_app_user
+PG_PASSWORD=<use-strong-password-here>
+PG_DATABASE=rocket_data
+
+# CORS Origin (legacy configuration)
+ORIGIN=https://your-frontend-domain.com
+```
+
+<Warning>
+  The `src/config.js` file uses hardcoded defaults including `PG_PASSWORD: "admin@123"`. Never use these defaults in production. Always override via environment variables.
+</Warning>
+
+### Frontend Environment Variables
+
+Create `/source/frontend/.env.production`:
+
+```bash
+VITE_API_URL=https://api.your-domain.com
+VITE_WS_URL=wss://api.your-domain.com
+```
+
+<Note>
+  Vite only exposes variables prefixed with `VITE_` to the client. Access them via `import.meta.env.VITE_API_URL`.
+</Note>
+
+---
+
+## CORS Configuration
+
+### Update Production Origins
+
+The CORS configuration in `src/app.js:17-37` currently hardcodes local development IPs. Update for production:
+
+```javascript
+// src/app.js:17-25
+const allowedOrigins = [
+  process.env.FRONTEND_URL || 'https://your-domain.com',
+  'https://www.your-domain.com',
+  // Add mobile app origins if applicable
+  'capacitor://localhost',
+  'ionic://localhost',
+];
+
+// Remove development origins in production:
+if (process.env.NODE_ENV === 'development') {
+  allowedOrigins.push(
+    'http://localhost:5173',
+    'http://192.168.1.8:5173',
+    'http://192.168.100.18:5173',
+    'http://192.168.1.140:5173',
+    'http://192.168.1.130:5173',
+    'http://172.26.50.96:5173/',
+    'http://192.168.1.107:5173'
+  );
+}
+```
+
+### WebSocket CORS
+
+Update Socket.IO configuration in `src/websocket.js:18`:
+
+```javascript
+// src/websocket.js:18
+io = new Server(server, {
+  cors: {
+    origin: process.env.NODE_ENV === 'production'
+      ? ['https://your-domain.com', 'https://www.your-domain.com']
+      : '*',
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+```
+
+<Warning>
+  The current configuration uses `cors: { origin: "*" }` which allows any origin. This is a security risk in production and should be restricted to your actual frontend domains.
+</Warning>
+
+---
+
+## Database Optimization
+
+### Connection Pool Configuration
+
+Update `src/db.js:10-16` to optimize PostgreSQL connection pooling:
+
+```javascript
+// src/db.js
+import pg from "pg";
+import {
+  PG_DATABASE,
+  PG_HOST,
+  PG_PASSWORD,
+  PG_PORT,
+  PG_USER,
+} from "./config.js";
+
+export const pool = new pg.Pool({
+  port: PG_PORT,
+  host: PG_HOST,
+  user: PG_USER,
+  password: PG_PASSWORD,
+  database: PG_DATABASE,
+  // Production optimizations:
+  max: 20,                          // Maximum pool size
+  idleTimeoutMillis: 30000,         // Close idle clients after 30s
+  connectionTimeoutMillis: 2000,    // Return error if connection takes > 2s
+  maxUses: 7500,                    // Close connections after 7500 uses
+  allowExitOnIdle: false,           // Keep process alive with idle pool
+});
+
+pool.on("connect", () => {
+  console.log("Database connected");
+});
+
+pool.on("error", (err) => {
+  console.error("Unexpected database error:", err);
+});
+```
+
+### Query Optimization
+
+The WebSocket implementation (`src/websocket.js`) runs queries at high frequency:
+
+| Query | Interval | Table | Optimization |
+|-------|----------|-------|-------------|
+| `nuevos-datos` | 100ms | `data` | Add index on `(date DESC, time DESC)` |
+| `banco-datos` | 500ms | `prueba_estatica_0` | Add index on `id DESC` |
+| `xitzin2-datos` | 200ms | `xitzin_2_data` | Consider materialized view |
+| `baterias` | 5000ms | `battery_status` | Add composite index |
+| `xitzin2-baterias` | 5000ms | `xitzin_2_batteries` | Add composite index |
+| `laniakea` | 200ms | `datos_laniakea` | Add index on `(date DESC, time DESC)` |
+
+#### Add Database Indexes
+
+```sql
+-- Optimize frequent DESC queries (websocket.js:77,83,107)
+CREATE INDEX idx_data_date_time ON data (date DESC, time DESC);
+CREATE INDEX idx_prueba_estatica_id ON prueba_estatica_0 (id DESC);
+CREATE INDEX idx_laniakea_date_time ON datos_laniakea (date DESC, time DESC);
+
+-- Optimize user lookups (auth queries)
+CREATE INDEX idx_users_email ON users (email);
+CREATE INDEX idx_users_created ON users (created_at DESC);
+
+-- Optimize task queries with user relationships (database/init.sql:7)
+CREATE INDEX idx_task_user_id ON task (user_id);
+```
+
+<Note>
+  The `LIMIT 150` on the `data` table query (websocket.js:24) can still be slow without proper indexing. Monitor query performance with `EXPLAIN ANALYZE`.
+</Note>
+
+---
+
+## WebSocket Performance
+
+### Optimize Polling Intervals
+
+The current implementation in `src/websocket.js:76-110` uses aggressive polling. Consider adjusting based on your needs:
+
+```javascript
+// Reduce frequency for less critical data
+const POLLING_INTERVALS = {
+  critical: 100,    // nuevos-datos (currently 100ms)
+  high: 500,        // banco-datos (currently 500ms)
+  medium: 1000,     // Consider slowing xitzin2-datos from 200ms
+  low: 5000,        // baterias (currently 5000ms)
+};
+
+// Only emit if data actually changed (current implementation)
+// This is already optimized with lastTimestamps check (websocket.js:65-74)
+```
+
+### Connection Handling
+
+Add connection limits and rate limiting:
+
+```javascript
+// src/websocket.js
+export function initWebSocket(server) {
+  io = new Server(server, {
+    cors: { /* ... */ },
+    maxHttpBufferSize: 1e6,              // 1MB max message size
+    pingTimeout: 60000,                  // 60s ping timeout
+    pingInterval: 25000,                 // Ping every 25s
+    transports: ['websocket', 'polling'], // Prefer WebSocket
+    allowUpgrades: true,
+  });
+
+  // Track connections per IP
+  const connectionCount = new Map();
+
+  io.use((socket, next) => {
+    const ip = socket.handshake.address;
+    const count = connectionCount.get(ip) || 0;
+
+    if (count > 10) {
+      return next(new Error('Too many connections from this IP'));
+    }
+
+    connectionCount.set(ip, count + 1);
+    socket.on('disconnect', () => {
+      connectionCount.set(ip, (connectionCount.get(ip) || 1) - 1);
+    });
+
+    next();
+  });
+  
+  // ... rest of implementation
+}
+```
+
+<Warning>
+  The current implementation emits to **all connected clients** on every data change. With many clients, this can cause significant server load. Consider implementing rooms or namespaces for different data channels.
+</Warning>
+
+---
+
+## Express Server Optimization
+
+### Request Parsing Limits
+
+Update `src/app.js:41-42` to prevent abuse:
+
+```javascript
+// src/app.js
+app.use(express.json({ limit: '1mb' }));  // Limit request body size
+app.use(express.urlencoded({ extended: false, limit: '1mb' }));
+```
+
+### Compression Middleware
+
+Add gzip compression (not currently implemented):
+
+```bash
+npm install compression
+```
+
+```javascript
+// src/app.js (add after line 12)
+import compression from 'compression';
+
+app.use(compression({
+  filter: (req, res) => {
+    if (req.headers['x-no-compression']) {
+      return false;
+    }
+    return compression.filter(req, res);
+  },
+  level: 6, // Compression level (0-9)
+}));
+```
+
+### Rate Limiting
+
+Protect API endpoints from abuse:
+
+```bash
+npm install express-rate-limit
+```
+
+```javascript
+// src/app.js
+import rateLimit from 'express-rate-limit';
+
+const limiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 100, // Limit each IP to 100 requests per windowMs
+  message: 'Too many requests from this IP',
+  standardHeaders: true,
+  legacyHeaders: false,
+});
+
+// Apply to all API routes
+app.use('/api', limiter);
+
+// Stricter limit for auth endpoints
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: 5,
+  skipSuccessfulRequests: true,
+});
+
+app.use('/api/login', authLimiter);
+app.use('/api/register', authLimiter);
+```
+
+---
+
+## Security Hardening
+
+### Helmet Security Headers
+
+Add helmet middleware (not currently implemented):
+
+```bash
+npm install helmet
+```
+
+```javascript
+// src/app.js (add after line 12)
+import helmet from 'helmet';
+
+app.use(helmet({
+  contentSecurityPolicy: {
+    directives: {
+      defaultSrc: ["'self'"],
+      styleSrc: ["'self'", "'unsafe-inline'"],
+      scriptSrc: ["'self'"],
+      imgSrc: ["'self'", "data:", "https:"],
+    },
+  },
+  hsts: {
+    maxAge: 31536000,
+    includeSubDomains: true,
+    preload: true,
+  },
+}));
+```
+
+### Cookie Security
+
+Update cookie settings for production (affects JWT cookies):
+
+```javascript
+// When setting cookies in auth routes
+res.cookie('token', token, {
+  httpOnly: true,
+  secure: process.env.NODE_ENV === 'production', // HTTPS only
+  sameSite: 'strict',
+  maxAge: 24 * 60 * 60 * 1000, // 24 hours
+  domain: process.env.COOKIE_DOMAIN, // e.g., '.your-domain.com'
+});
+```
+
+<Warning>
+  The application uses JWT tokens stored in cookies (cookie-parser middleware at app.js:40). Ensure your JWT secret is strong and stored in environment variables, not in code.
+</Warning>
+
+### Database Connection Security
+
+Never expose database credentials:
+
+```bash
+# Bad - visible in process list
+PG_PASSWORD=admin@123 node .
+
+# Good - use .env file
+node .  # Reads from .env
+
+# Better - use secrets management
+# Kubernetes secrets, AWS Secrets Manager, HashiCorp Vault, etc.
+```
+
+---
+
+## Frontend Build Optimization
+
+### Vite Production Build
+
+The `frontend/package.json:8` script runs `vite build`. Optimize with custom config:
+
+```javascript
+// frontend/vite.config.js
+import { defineConfig } from 'vite'
+import { nodePolyfills } from 'vite-plugin-node-polyfills'
+import react from '@vitejs/plugin-react'
+
+export default defineConfig(({ mode }) => ({
+  plugins: [react(), nodePolyfills()],
+  
+  server: {
+    host: true,
+    port: 5173,
+  },
+  
+  build: {
+    target: 'es2015',
+    outDir: 'dist',
+    assetsDir: 'assets',
+    sourcemap: mode === 'production' ? false : true,
+    minify: 'terser',
+    terserOptions: {
+      compress: {
+        drop_console: true, // Remove console.logs in production
+        drop_debugger: true,
+      },
+    },
+    rollupOptions: {
+      output: {
+        manualChunks: {
+          'vendor': ['react', 'react-dom', 'react-router-dom'],
+          'mui': ['@mui/material', '@mui/icons-material'],
+          'charts': ['@nivo/line', '@mui/x-charts', 'chart.js'],
+          'socket': ['socket.io-client'],
+        },
+      },
+    },
+    chunkSizeWarningLimit: 1000,
+  },
+  
+  preview: {
+    port: 5173,
+    host: true,
+  },
+}));
+```
+
+### Asset Optimization
+
+```javascript
+// Additional vite config
+optimizeDeps: {
+  include: [
+    'react',
+    'react-dom',
+    'socket.io-client',
+    '@mui/material',
+  ],
+},
+```
+
+<Note>
+  The frontend has heavy dependencies (MUI, charts, 3D libraries from @react-three). Code splitting with `manualChunks` significantly improves initial load time.
+</Note>
+
+---
+
+## Monitoring and Logging
+
+### Morgan Logging Configuration
+
+The app uses morgan (`src/app.js:39`). Configure for production:
+
+```javascript
+// src/app.js:39
+import morgan from 'morgan';
+import fs from 'fs';
+import path from 'path';
+
+if (process.env.NODE_ENV === 'production') {
+  // Log to file in production
+  const accessLogStream = fs.createWriteStream(
+    path.join(process.cwd(), 'access.log'),
+    { flags: 'a' }
+  );
+  app.use(morgan('combined', { stream: accessLogStream }));
+} else {
+  // Console logging in development
+  app.use(morgan('dev'));
+}
+```
+
+### Database Query Logging
+
+Add query logging for slow queries:
+
+```javascript
+// src/db.js
+const logQuery = process.env.NODE_ENV === 'development';
+
+export const pool = new pg.Pool({
+  // ... config
+});
+
+if (logQuery) {
+  const originalQuery = pool.query;
+  pool.query = function(...args) {
+    const start = Date.now();
+    return originalQuery.apply(this, args).then(res => {
+      const duration = Date.now() - start;
+      if (duration > 100) {
+        console.warn(`Slow query (${duration}ms):`, args[0]);
+      }
+      return res;
+    });
+  };
+}
+```
+
+### PM2 Monitoring
+
+```bash
+# Install PM2 monitoring
+pm2 install pm2-logrotate
+
+# Configure log rotation
+pm2 set pm2-logrotate:max_size 10M
+pm2 set pm2-logrotate:retain 7
+
+# Monitor in real-time
+pm2 monit
+
+# View metrics
+pm2 describe safi-controlhub
+```
+
+---
+
+## Performance Benchmarks
+
+### Expected Performance
+
+Based on the architecture:
+
+- **HTTP API**: 500-1000 req/s (with proper connection pooling)
+- **WebSocket**: 100-500 concurrent connections
+- **Database**: 6 queries every 100-5000ms = ~70 queries/sec base load
+- **Memory**: ~200-500MB per backend process
+
+### Load Testing
+
+```bash
+# Install artillery
+npm install -g artillery
+
+# Test HTTP endpoints
+arteillery quick --count 100 --num 1000 http://localhost:3000/api/ping
+
+# Test WebSocket connections
+# Create artillery-ws.yml with Socket.IO scenario
+arteillery run artillery-ws.yml
+```
+
+<Warning>
+  The WebSocket polling intervals (100ms-5000ms) can cause significant database load under high connection counts. With 100 concurrent users, the `nuevos-datos` channel alone generates 1,000 queries/second. Monitor database CPU and consider:
+  
+  - Increasing polling intervals
+  - Implementing Redis caching
+  - Using database query result caching
+  - Implementing rooms to limit broadcast scope
+</Warning>
+
+---
+
+## Caching Strategy
+
+### Redis for WebSocket Data
+
+Reduce database load by caching frequently queried data:
+
+```bash
+npm install redis
+```
+
+```javascript
+// src/cache.js
+import { createClient } from 'redis';
+
+const client = createClient({
+  url: process.env.REDIS_URL || 'redis://localhost:6379',
+});
+
+client.on('error', (err) => console.error('Redis error:', err));
+
+await client.connect();
+
+export { client as redis };
+```
+
+```javascript
+// src/websocket.js - cache high-frequency queries
+import { redis } from './cache.js';
+
+const emitIfNew = async ({ query, channel, getLast, cacheKey, ttl }) => {
+  // Try cache first
+  const cached = await redis.get(cacheKey);
+  if (cached) {
+    const rows = JSON.parse(cached);
+    io.emit(channel, rows);
+    return;
+  }
+  
+  // Query database and cache
+  const { rows } = await pool.query(query);
+  if (rows.length > 0) {
+    await redis.setEx(cacheKey, ttl, JSON.stringify(rows));
+    io.emit(channel, rows);
+  }
+};
+```
+
+---
+
+## Deployment Checklist
+
+### Pre-Production
+
+- [ ] All environment variables set in `.env`
+- [ ] Database credentials changed from defaults
+- [ ] CORS origins updated to production domains (app.js:17-25)
+- [ ] WebSocket CORS restricted (websocket.js:18)
+- [ ] SSL certificates installed and configured
+- [ ] Database indexes created for optimized queries
+- [ ] Frontend built with `npm run build`
+- [ ] Console.logs removed from production builds
+
+### Security
+
+- [ ] Helmet middleware installed
+- [ ] Rate limiting configured
+- [ ] Cookie security flags enabled (secure, httpOnly)
+- [ ] JWT secret is strong and not in code
+- [ ] Serial port configuration reviewed (SerialReader.js)
+- [ ] Error messages don't expose system details
+
+### Performance
+
+- [ ] PostgreSQL connection pool configured
+- [ ] Compression middleware enabled
+- [ ] Vite build optimized with code splitting
+- [ ] Static assets served with caching headers
+- [ ] WebSocket polling intervals optimized
+- [ ] Redis caching implemented (optional)
+
+### Monitoring
+
+- [ ] PM2 configured with process management
+- [ ] Log rotation enabled
+- [ ] Access logs stored and rotated
+- [ ] Database query performance monitored
+- [ ] Error tracking service integrated
+- [ ] Uptime monitoring configured
+
+---
+
+## Troubleshooting
+
+### High Database Load
+
+**Symptom**: PostgreSQL CPU > 80%
+
+**Cause**: WebSocket polling queries (websocket.js:76-110)
+
+**Solution**:
+1. Add database indexes (see Query Optimization section)
+2. Implement Redis caching for high-frequency queries
+3. Increase polling intervals for non-critical data
+4. Use `EXPLAIN ANALYZE` to identify slow queries
+
+### WebSocket Disconnections
+
+**Symptom**: Clients frequently disconnect/reconnect
+
+**Cause**: Aggressive ping/pong timeouts or reverse proxy configuration
+
+**Solution**:
+```javascript
+// Increase timeout values
+io = new Server(server, {
+  pingTimeout: 60000,  // Increase from default 20000
+  pingInterval: 25000, // Increase from default 25000
+});
+```
+
+Update Nginx:
+```nginx
+proxy_read_timeout 90s;
+proxy_send_timeout 90s;
+```
+
+### CORS Errors
+
+**Symptom**: Browser shows CORS policy errors
+
+**Cause**: Frontend domain not in allowedOrigins (app.js:17-25)
+
+**Solution**: Add your production domain to the allowedOrigins array and restart the backend
+
+### Memory Leaks
+
+**Symptom**: Node.js process memory grows over time
+
+**Cause**: Possible issues in WebSocket event handlers or database connection leaks
+
+**Solution**:
+1. Monitor with `pm2 monit`
+2. Use `--max-old-space-size=2048` to increase heap limit
+3. Review WebSocket disconnect handlers
+4. Ensure database connections are properly released
+
+---
+
+## Next Steps
+
+- Set up CI/CD pipeline for automated deployments
+- Implement comprehensive error tracking (Sentry, LogRocket)
+- Configure automated database backups
+- Set up health check endpoints for load balancers
+- Implement metrics collection (Prometheus, Grafana)
+- Create disaster recovery plan

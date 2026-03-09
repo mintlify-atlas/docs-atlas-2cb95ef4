@@ -1,0 +1,451 @@
+---
+title: Database Setup
+description: Set up and configure PostgreSQL database for SAFI ControlHub
+---
+
+SAFI ControlHub uses PostgreSQL as its primary database for storing tasks, user data, and authentication information. This guide covers installation, schema initialization, and configuration.
+
+## Prerequisites
+
+- PostgreSQL 12 or higher installed
+- PostgreSQL command-line tools (`psql`, `createdb`)
+- Database credentials (username and password)
+
+## Installing PostgreSQL
+
+<Steps>
+  <Step title="Install PostgreSQL">
+    <CodeGroup>
+    ```bash Ubuntu/Debian
+    sudo apt update
+    sudo apt install postgresql postgresql-contrib
+    ```
+    
+    ```bash macOS (Homebrew)
+    brew install postgresql@14
+    brew services start postgresql@14
+    ```
+    
+    ```bash Windows
+    # Download installer from:
+    # https://www.postgresql.org/download/windows/
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Start PostgreSQL service">
+    <CodeGroup>
+    ```bash Linux (systemd)
+    sudo systemctl start postgresql
+    sudo systemctl enable postgresql
+    ```
+    
+    ```bash macOS
+    brew services start postgresql@14
+    ```
+    
+    ```bash Windows
+    # PostgreSQL starts automatically as a service
+    # Or use pgAdmin to manage the service
+    ```
+    </CodeGroup>
+  </Step>
+
+  <Step title="Verify installation">
+    Check that PostgreSQL is running:
+    
+    ```bash
+    psql --version
+    ```
+    
+    Expected output:
+    ```
+    psql (PostgreSQL) 14.x
+    ```
+  </Step>
+</Steps>
+
+## Database Initialization
+
+<Steps>
+  <Step title="Create the database">
+    Create the `rocket_data` database:
+    
+    ```bash
+    createdb -U postgres rocket_data
+    ```
+    
+    Or using `psql`:
+    
+    ```sql
+    psql -U postgres
+    CREATE DATABASE rocket_data;
+    \q
+    ```
+    
+    <Note>
+      The database name `rocket_data` is configured in `src/config.js:7` and can be changed via the `PG_DATABASE` environment variable.
+    </Note>
+  </Step>
+
+  <Step title="Run the initialization script">
+    Execute the database schema from `database/init.sql`:
+    
+    ```bash
+    psql -U postgres -d rocket_data -f database/init.sql
+    ```
+    
+    This will create all required tables and constraints.
+  </Step>
+
+  <Step title="Verify table creation">
+    Connect to the database and list tables:
+    
+    ```bash
+    psql -U postgres -d rocket_data
+    ```
+    
+    ```sql
+    \dt
+    ```
+    
+    You should see:
+    ```
+     Schema |  Name  | Type  |  Owner
+    --------+--------+-------+----------
+     public | task   | table | postgres
+     public | users  | table | postgres
+    ```
+    
+    Exit with `\q`
+  </Step>
+</Steps>
+
+## Database Schema
+
+The database schema is defined in `database/init.sql:1` and consists of two main tables:
+
+### Users Table
+
+```sql
+CREATE TABLE users (
+    id SERIAL PRIMARY KEY,
+    name VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
+    email VARCHAR(255) UNIQUE NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    role INTEGER,
+    gravatar VARCHAR(255)
+);
+```
+
+**Schema Details:**
+
+- **id**: Auto-incrementing primary key
+- **name**: User's full name (required)
+- **password**: Hashed password using bcrypt (required)
+- **email**: Unique email address for login (required, unique constraint)
+- **created_at**: Timestamp of user creation (automatic)
+- **updated_at**: Timestamp of last update (automatic)
+- **role**: User role identifier for authorization (integer)
+- **gravatar**: URL to user's Gravatar profile image
+
+<Note>
+  Passwords are hashed using bcrypt (v5.1.0) before storage. Never store plaintext passwords.
+</Note>
+
+### Task Table
+
+```sql
+CREATE TABLE task(
+    id SERIAL PRIMARY KEY,
+    title VARCHAR(255) NOT NULL,
+    description TEXT,
+    user_id INTEGER REFERENCES users(id)
+);
+```
+
+**Schema Details:**
+
+- **id**: Auto-incrementing primary key
+- **title**: Task title (required, no longer unique)
+- **description**: Detailed task description (optional)
+- **user_id**: Foreign key reference to users table
+
+**Schema Evolution:**
+
+The init.sql file shows the schema evolution:
+
+```sql
+-- Remove unique constraint from title
+ALTER TABLE task DROP CONSTRAINT task_title_key;
+
+-- Add user relationship
+ALTER TABLE task ADD COLUMN user_id INTEGER REFERENCES users(id);
+```
+
+This allows multiple users to create tasks with the same title.
+
+## Database Connection Configuration
+
+The database connection is configured in `src/db.js:10` using the `pg` package:
+
+```javascript
+import { PG_DATABASE, PG_HOST, PG_PASSWORD, PG_PORT, PG_USER } from "./config.js";
+import pg from "pg";
+
+export const pool = new pg.Pool({
+  port: PG_PORT,
+  host: PG_HOST,
+  user: PG_USER,
+  password: PG_PASSWORD,
+  database: PG_DATABASE,
+});
+
+pool.on("connect", () => {
+  console.log("Database connected");
+});
+```
+
+### Connection Pool Benefits
+
+- **Efficient connection reuse**: Reduces overhead of creating new connections
+- **Automatic connection management**: Handles connection lifecycle
+- **Built-in error handling**: Reconnects on connection failures
+- **Configurable pool size**: Can be adjusted for production workloads
+
+<Warning>
+  The connection pool is created when the module is imported. Ensure your environment variables are set before starting the application.
+</Warning>
+
+## Authentication Setup
+
+### Configure PostgreSQL Authentication
+
+Edit PostgreSQL's authentication configuration:
+
+```bash
+sudo nano /etc/postgresql/14/main/pg_hba.conf
+```
+
+Ensure local connections are allowed:
+
+```conf
+# TYPE  DATABASE        USER            ADDRESS                 METHOD
+local   all             postgres                                peer
+host    all             all             127.0.0.1/32            md5
+host    all             all             ::1/128                 md5
+```
+
+Restart PostgreSQL after changes:
+
+```bash
+sudo systemctl restart postgresql
+```
+
+### Set PostgreSQL Password
+
+Set the password for the `postgres` user:
+
+```sql
+psql -U postgres
+ALTER USER postgres WITH PASSWORD 'admin@123';
+\q
+```
+
+<Warning>
+  The default password `admin@123` (from `src/config.js:6`) is for development only. Use a strong password in production and set it via the `PG_PASSWORD` environment variable.
+</Warning>
+
+## Seeding Data (Optional)
+
+### Create Test User
+
+For development, you can create a test user:
+
+```sql
+psql -U postgres -d rocket_data
+
+INSERT INTO users (name, email, password, role, gravatar)
+VALUES (
+    'Test User',
+    'test@example.com',
+    '$2b$10$rMkXXOcL0qBw.gYvz6Vx7.VNDWMpD8RNBTdxIoXO2gQZ.e7xV4gqK', -- bcrypt hash of 'password123'
+    1,
+    'https://www.gravatar.com/avatar/55502f40dc8b7c769880b10874abc9d0'
+);
+```
+
+<Note>
+  The password shown is a bcrypt hash of `password123`. Use the bcrypt library to generate hashes for other passwords.
+</Note>
+
+### Create Sample Tasks
+
+```sql
+INSERT INTO task (title, description, user_id)
+VALUES
+    ('System Health Check', 'Monitor all subsystems and verify operational status', 1),
+    ('Data Acquisition Test', 'Collect sensor data from all connected devices', 1),
+    ('Communication Link Verification', 'Test LoRa and RF communication channels', 1);
+```
+
+## Production Considerations
+
+### Database Performance
+
+<Steps>
+  <Step title="Configure connection pooling">
+    Adjust pool size for production workloads in `src/db.js`:
+    
+    ```javascript
+    export const pool = new pg.Pool({
+      port: PG_PORT,
+      host: PG_HOST,
+      user: PG_USER,
+      password: PG_PASSWORD,
+      database: PG_DATABASE,
+      max: 20,                    // Maximum pool size
+      idleTimeoutMillis: 30000,   // Close idle clients after 30s
+      connectionTimeoutMillis: 2000, // Return error after 2s if no connection available
+    });
+    ```
+  </Step>
+
+  <Step title="Enable query logging">
+    Monitor slow queries in `postgresql.conf`:
+    
+    ```conf
+    log_min_duration_statement = 1000  # Log queries taking > 1s
+    log_connections = on
+    log_disconnections = on
+    ```
+  </Step>
+
+  <Step title="Create indexes">
+    Add indexes for frequently queried columns:
+    
+    ```sql
+    CREATE INDEX idx_users_email ON users(email);
+    CREATE INDEX idx_task_user_id ON task(user_id);
+    CREATE INDEX idx_users_created_at ON users(created_at);
+    ```
+  </Step>
+
+  <Step title="Set up backups">
+    Configure automated backups:
+    
+    ```bash
+    # Daily backup script
+    pg_dump -U postgres rocket_data > backup_$(date +%Y%m%d).sql
+    ```
+  </Step>
+</Steps>
+
+### Security Best Practices
+
+<Warning>
+  **Production Security Checklist:**
+  
+  - Use strong, unique passwords for all database users
+  - Create application-specific database users (don't use `postgres` superuser)
+  - Restrict network access using `pg_hba.conf`
+  - Enable SSL/TLS connections for remote databases
+  - Regularly update PostgreSQL to the latest patch version
+  - Implement database-level audit logging
+  - Use encrypted connections for production deployments
+  - Set up database firewall rules to allow only application servers
+</Warning>
+
+### Creating Application User
+
+For production, create a dedicated user with limited privileges:
+
+```sql
+CREATE USER controlhub_app WITH PASSWORD 'secure_password_here';
+GRANT CONNECT ON DATABASE rocket_data TO controlhub_app;
+GRANT SELECT, INSERT, UPDATE, DELETE ON ALL TABLES IN SCHEMA public TO controlhub_app;
+GRANT USAGE, SELECT ON ALL SEQUENCES IN SCHEMA public TO controlhub_app;
+```
+
+Then update your environment variables:
+
+```bash
+PG_USER=controlhub_app
+PG_PASSWORD=secure_password_here
+```
+
+## Troubleshooting
+
+### Connection Issues
+
+**Error: `FATAL: Peer authentication failed`**
+
+**Solution:** Change authentication method in `pg_hba.conf` from `peer` to `md5`
+
+**Error: `database "rocket_data" does not exist`**
+
+**Solution:** Create the database using `createdb -U postgres rocket_data`
+
+**Error: `password authentication failed`**
+
+**Solution:** 
+1. Reset password: `ALTER USER postgres WITH PASSWORD 'admin@123';`
+2. Verify `PG_PASSWORD` in environment variables
+3. Check `pg_hba.conf` authentication method
+
+### Schema Issues
+
+**Error: `relation "users" does not exist`**
+
+**Solution:** Run the initialization script:
+```bash
+psql -U postgres -d rocket_data -f database/init.sql
+```
+
+**Error: `constraint "task_title_key" does not exist`**
+
+**Solution:** This is expected after schema evolution. The unique constraint was removed to allow duplicate task titles.
+
+### Performance Issues
+
+**Slow query performance:**
+
+1. Check for missing indexes:
+   ```sql
+   SELECT schemaname, tablename, indexname FROM pg_indexes WHERE schemaname = 'public';
+   ```
+
+2. Analyze query execution:
+   ```sql
+   EXPLAIN ANALYZE SELECT * FROM task WHERE user_id = 1;
+   ```
+
+3. Update table statistics:
+   ```sql
+   ANALYZE task;
+   ANALYZE users;
+   ```
+
+## Database Migrations
+
+For future schema changes, consider using a migration tool:
+
+- **node-pg-migrate**: PostgreSQL migration tool for Node.js
+- **Knex.js**: Query builder with migration support
+- **Sequelize**: ORM with built-in migrations
+
+Example migration workflow:
+
+```bash
+npm install node-pg-migrate
+npx node-pg-migrate create add-new-column
+```
+
+## Next Steps
+
+- [Environment Variables Configuration](/development/environment-variables)
+- [Local Development Setup](/development/local-setup)
+- [API Reference](/api/overview)
+- [User Authentication Guide](/guide/authentication)

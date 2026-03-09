@@ -1,0 +1,331 @@
+---
+title: 'Device Control'
+description: 'Endpoints for controlling devices and sending commands'
+---
+
+## Overview
+
+The Device Control API allows you to send commands to aerospace systems. Currently supports ignition control for the Banco de Pruebas (test bench).
+
+---
+
+## Ignition Control
+
+### Send Ignition Command
+
+Trigger ignition on the test bench. The ignition state is activated for 1 second and then automatically reset.
+
+```http
+POST /api/ignicion
+```
+
+#### Request Body
+
+<ParamField body="command" type="string" required>
+  Command to execute. Must be `"IGNICION"` to trigger ignition.
+</ParamField>
+
+#### Response
+
+<ResponseField name="message" type="string">
+  Confirmation message indicating the command was processed
+</ResponseField>
+
+#### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:3000/api/ignicion \
+  -H "Content-Type: application/json" \
+  -d '{"command": "IGNICION"}'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/ignicion', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json',
+  },
+  body: JSON.stringify({
+    command: 'IGNICION'
+  })
+});
+
+const result = await response.json();
+console.log(result.message);
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'http://localhost:3000/api/ignicion',
+    json={'command': 'IGNICION'}
+)
+
+result = response.json()
+print(result['message'])
+```
+
+</CodeGroup>
+
+#### Example Response
+
+```json
+{
+  "message": "Comando de ignición procesado correctamente"
+}
+```
+
+#### Error Responses
+
+<ResponseField name="400">
+  **Unrecognized command**: `{"message": "Comando no reconocido"}`
+  
+  Returned when the command value is not `"IGNICION"`.
+</ResponseField>
+
+<ResponseField name="500">
+  **Processing error**: `{"message": "Error al procesar el comando de ignición"}`
+  
+  Returned when an error occurs during command processing.
+</ResponseField>
+
+---
+
+### Get Ignition State
+
+Retrieve the current ignition state. Returns `"IGNICION"` if ignition is currently active, or `null` if inactive.
+
+```http
+GET /api/ignicion
+```
+
+#### Response
+
+<ResponseField name="command" type="string | null">
+  Current ignition state. Returns `"IGNICION"` when active (for 1 second after trigger), or `null` when inactive.
+</ResponseField>
+
+#### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl http://localhost:3000/api/ignicion
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/ignicion');
+const state = await response.json();
+
+if (state.command === 'IGNICION') {
+  console.log('Ignition is active!');
+} else {
+  console.log('Ignition is inactive');
+}
+```
+
+```python Python
+import requests
+
+response = requests.get('http://localhost:3000/api/ignicion')
+state = response.json()
+
+if state['command'] == 'IGNICION':
+    print('Ignition is active!')
+else:
+    print('Ignition is inactive')
+```
+
+</CodeGroup>
+
+#### Example Response (Active)
+
+```json
+{
+  "command": "IGNICION"
+}
+```
+
+#### Example Response (Inactive)
+
+```json
+{
+  "command": null
+}
+```
+
+#### Error Responses
+
+<ResponseField name="500">
+  **Read error**: `{"message": "Error al obtener el estado de ignición."}`
+  
+  Returned when an error occurs while retrieving the ignition state.
+</ResponseField>
+
+---
+
+## Ignition Control Flow
+
+The ignition control system works as follows:
+
+1. **Trigger Ignition**: Send a POST request with `{"command": "IGNICION"}` to `/api/ignicion`
+2. **Ignition Activated**: The ignition state is set to `true` ("IGNICION")
+3. **Auto-Reset**: After 1 second (1000ms), the state automatically resets to `false` (null)
+4. **Poll State**: You can poll GET `/api/ignicion` to check the current state
+
+### Timing Diagram
+
+```
+POST /api/ignicion
+     |
+     v
+[IGNICION = true] -----> [1 second delay] -----> [IGNICION = false]
+     |
+     |
+     v
+GET /api/ignicion returns {"command": "IGNICION"}
+                                          |
+                                          v
+                   GET /api/ignicion returns {"command": null}
+```
+
+---
+
+## Implementation Details
+
+### State Management
+
+The ignition state is managed in-memory using a JavaScript variable:
+
+```javascript
+let ignicionState = false;
+```
+
+<Warning>
+The ignition state is stored in server memory and will be reset if the server restarts. For production use, consider implementing persistent state storage if needed.
+</Warning>
+
+### Automatic Reset
+
+When ignition is triggered, a timeout is set to automatically reset the state:
+
+```javascript
+setTimeout(() => {
+  ignicionState = false; 
+  console.log("Ignición reseteada a NULL (false)");
+}, 1000); // 1 second
+```
+
+This ensures the ignition command is only active for a brief period, preventing prolonged activation.
+
+---
+
+## Use Cases
+
+### Single Ignition Trigger
+
+Trigger ignition once and wait for completion:
+
+```javascript
+// Trigger ignition
+await fetch('http://localhost:3000/api/ignicion', {
+  method: 'POST',
+  headers: { 'Content-Type': 'application/json' },
+  body: JSON.stringify({ command: 'IGNICION' })
+});
+
+// Wait for auto-reset
+await new Promise(resolve => setTimeout(resolve, 1500));
+
+// Verify state is reset
+const state = await fetch('http://localhost:3000/api/ignicion');
+const { command } = await state.json();
+console.log(command); // Should be null
+```
+
+### Polling for Ignition State
+
+Continuously monitor the ignition state:
+
+```javascript
+const pollIgnitionState = async () => {
+  const response = await fetch('http://localhost:3000/api/ignicion');
+  const { command } = await response.json();
+  
+  if (command === 'IGNICION') {
+    console.log('Ignition is ACTIVE!');
+  } else {
+    console.log('Ignition is inactive');
+  }
+};
+
+// Poll every 200ms
+setInterval(pollIgnitionState, 200);
+```
+
+### Ignition with Confirmation
+
+Trigger ignition and confirm activation:
+
+```javascript
+const triggerIgnitionWithConfirmation = async () => {
+  // Send ignition command
+  const triggerResponse = await fetch('http://localhost:3000/api/ignicion', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ command: 'IGNICION' })
+  });
+  
+  const result = await triggerResponse.json();
+  console.log(result.message);
+  
+  // Immediately check state to confirm
+  const stateResponse = await fetch('http://localhost:3000/api/ignicion');
+  const { command } = await stateResponse.json();
+  
+  if (command === 'IGNICION') {
+    console.log('✓ Ignition confirmed active');
+    return true;
+  } else {
+    console.log('✗ Ignition failed to activate');
+    return false;
+  }
+};
+
+await triggerIgnitionWithConfirmation();
+```
+
+---
+
+## Safety Considerations
+
+<Warning>
+**Important Safety Notes:**
+
+- The ignition endpoint has no authentication requirement in the current implementation
+- Consider adding authentication via the `isAuth` middleware for production use
+- Implement additional safety checks before triggering ignition in real systems
+- Add logging and audit trails for all ignition events
+- Consider rate limiting to prevent rapid successive ignition attempts
+</Warning>
+
+### Recommended Enhancements for Production
+
+1. **Add Authentication**:
+   ```javascript
+   router.post("/ignicion", isAuth, ignicion);
+   ```
+
+2. **Add Authorization** (check user permission level):
+   ```javascript
+   router.post("/ignicion", isAuth, requireLevel(3), ignicion);
+   ```
+
+3. **Add Confirmation Mechanism** (require two-step confirmation)
+
+4. **Add Cooldown Period** (prevent rapid re-triggering)
+
+5. **Log All Events** (audit trail for safety and debugging)

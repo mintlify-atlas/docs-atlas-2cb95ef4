@@ -1,0 +1,536 @@
+---
+title: 'WebSocket Events'
+description: 'Complete reference for all WebSocket events and their payloads'
+---
+
+## Server-to-Client Events
+
+These events are emitted by the server and received by clients.
+
+### nuevos-datos
+
+Telemetry data from the main Xitzin-II rocket system.
+
+**Update Interval:** 100ms (when data changes)
+
+**Source:** `src/websocket.js:76-80`
+
+**Payload:** Array of telemetry records (last 150 records)
+
+<ResponseField name="payload" type="array">
+  Array of telemetry objects from the `data` table
+  
+  <Expandable title="Record Structure">
+    <ResponseField name="date" type="string">
+      Date of the telemetry reading (YYYY-MM-DD format)
+    </ResponseField>
+    
+    <ResponseField name="time" type="string">
+      Time of the telemetry reading (HH:MM:SS format)
+    </ResponseField>
+    
+    <ResponseField name="altitude" type="number">
+      Altitude in meters
+    </ResponseField>
+    
+    <ResponseField name="temperature" type="number">
+      Temperature in Celsius
+    </ResponseField>
+    
+    <ResponseField name="pressure" type="number">
+      Atmospheric pressure reading
+    </ResponseField>
+    
+    <ResponseField name="velocity" type="number">
+      Velocity in km/h
+    </ResponseField>
+    
+    <ResponseField name="latitude" type="number">
+      GPS latitude coordinate
+    </ResponseField>
+    
+    <ResponseField name="longitude" type="number">
+      GPS longitude coordinate
+    </ResponseField>
+    
+    <ResponseField name="accel_x" type="number">
+      Acceleration on X-axis (m/s²)
+    </ResponseField>
+    
+    <ResponseField name="accel_y" type="number">
+      Acceleration on Y-axis (m/s²)
+    </ResponseField>
+    
+    <ResponseField name="accel_z" type="number">
+      Acceleration on Z-axis (m/s²)
+    </ResponseField>
+    
+    <ResponseField name="mission_state" type="integer">
+      Mission state/phase indicator:
+      - `0` - Preflight
+      - `1` - Lift-off
+      - `2` - Apogee
+      - `3` - Drogue
+      - `4` - Main
+      - `5` - Land
+    </ResponseField>
+    
+    <ResponseField name="air_brake_angle" type="number">
+      Air brake angle in degrees
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+**Example Usage:**
+
+```javascript
+import useWebsocket from '../api/useWebsocket';
+import { SOCKET_URL } from '../api/socketConfig';
+
+function TelemetryDisplay() {
+  const rawData = useWebsocket('nuevos-datos', SOCKET_URL);
+  
+  const latestData = rawData.length > 0 ? rawData[0] : null;
+  
+  if (!latestData) return <div>Waiting for data...</div>;
+  
+  return (
+    <div>
+      <p>Altitude: {parseFloat(latestData.altitude) || 0} m</p>
+      <p>Velocity: {parseFloat(latestData.velocity) || 0} km/h</p>
+      <p>Temperature: {parseFloat(latestData.temperature) || 0} °C</p>
+      <p>Mission State: {parseInt(latestData.mission_state, 10) || 0}</p>
+    </div>
+  );
+}
+```
+
+---
+
+### banco-datos
+
+Static test bench data.
+
+**Update Interval:** 500ms (when data changes)
+
+**Source:** `src/websocket.js:82-86`
+
+**Payload:** Array of test bench records (last 100 records)
+
+<ResponseField name="payload" type="array">
+  Array of test bench data objects from the `prueba_estatica_0` table
+  
+  <Expandable title="Record Structure">
+    <ResponseField name="id" type="integer">
+      Unique record identifier (auto-incrementing)
+    </ResponseField>
+    
+    <ResponseField name="[additional fields]" type="various">
+      Additional fields specific to test bench operations
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+**Example Usage:**
+
+```javascript
+const bancoData = useWebsocket('banco-datos', SOCKET_URL);
+
+console.log(`Test bench records: ${bancoData.length}`);
+```
+
+---
+
+### xitzin2-datos
+
+Alternate telemetry stream for Xitzin-II.
+
+**Update Interval:** 200ms (when data changes)
+
+**Source:** `src/websocket.js:88-92`
+
+**Payload:** Array of all records from `xitzin_2_data` table
+
+<ResponseField name="payload" type="array">
+  Array of telemetry objects from the `xitzin_2_data` table
+  
+  <Info>
+    This channel returns all records, not a limited subset. The data structure is similar to `nuevos-datos`.
+  </Info>
+</ResponseField>
+
+**Example Usage:**
+
+```javascript
+const xitzin2Data = useWebsocket('xitzin2-datos', SOCKET_URL);
+
+// Process latest record
+const latest = xitzin2Data.length > 0 ? xitzin2Data[0] : null;
+if (latest) {
+  const altitude = parseFloat(latest.altitude) || 0;
+  const velocity = parseFloat(latest.velocity) || 0;
+}
+```
+
+---
+
+### baterias
+
+Battery status for the main rocket system.
+
+**Update Interval:** 5000ms (5 seconds, when data changes)
+
+**Source:** `src/websocket.js:94-98`
+
+**Payload:** Array of battery status objects
+
+<ResponseField name="payload" type="array">
+  Array of battery status objects from the `battery_status` table
+  
+  <Expandable title="Record Structure">
+    <ResponseField name="battery_id" type="integer">
+      Unique battery identifier
+    </ResponseField>
+    
+    <ResponseField name="battery_level" type="number">
+      Battery charge level (0-100)
+    </ResponseField>
+    
+    <ResponseField name="voltage" type="number">
+      Current voltage reading in volts
+    </ResponseField>
+    
+    <ResponseField name="temperature" type="number">
+      Battery temperature in Celsius
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+**Example Usage:**
+
+```javascript
+import { LinearProgress, Typography } from '@mui/material';
+
+function BatteryMonitor() {
+  const batteryData = useWebsocket('baterias', SOCKET_URL);
+  
+  return (
+    <div>
+      {batteryData.map((battery) => (
+        <div key={battery.battery_id}>
+          <Typography>Battery {battery.battery_id}</Typography>
+          <LinearProgress 
+            variant="determinate" 
+            value={battery.battery_level}
+            color={battery.battery_level < 30 ? 'error' : 'success'}
+          />
+          <Typography>Voltage: {battery.voltage} V</Typography>
+          <Typography>Temperature: {battery.temperature} °C</Typography>
+        </div>
+      ))}
+    </div>
+  );
+}
+```
+
+---
+
+### xitzin2-baterias
+
+Battery status for Xitzin-II alternate system.
+
+**Update Interval:** 5000ms (5 seconds, when data changes)
+
+**Source:** `src/websocket.js:100-104`
+
+**Payload:** Array of battery status objects from `xitzin_2_batteries` table
+
+<ResponseField name="payload" type="array">
+  Array of battery status objects. Structure is identical to `baterias` event.
+</ResponseField>
+
+**Example Usage:**
+
+```javascript
+const x2Batteries = useWebsocket('xitzin2-baterias', SOCKET_URL);
+
+// Find lowest battery
+const lowestBattery = x2Batteries.reduce((min, battery) => 
+  battery.battery_level < min.battery_level ? battery : min,
+  { battery_level: 100 }
+);
+```
+
+---
+
+### laniakea
+
+Telemetry data from the Laniakea rocket system.
+
+**Update Interval:** 200ms (when data changes)
+
+**Source:** `src/websocket.js:106-110`
+
+**Payload:** Array of Laniakea telemetry records (last 100 records)
+
+<ResponseField name="payload" type="array">
+  Array of telemetry objects from the `datos_laniakea` table
+  
+  <Expandable title="Record Structure">
+    <ResponseField name="date" type="string">
+      Date of the telemetry reading
+    </ResponseField>
+    
+    <ResponseField name="time" type="string">
+      Time of the telemetry reading
+    </ResponseField>
+    
+    <ResponseField name="latitud" type="number">
+      GPS latitude coordinate
+    </ResponseField>
+    
+    <ResponseField name="longitud" type="number">
+      GPS longitude coordinate
+    </ResponseField>
+    
+    <ResponseField name="altitud" type="number">
+      Altitude in meters
+    </ResponseField>
+    
+    <ResponseField name="aceleracion" type="number">
+      Total acceleration magnitude (m/s²)
+    </ResponseField>
+    
+    <ResponseField name="accel_x" type="number">
+      Acceleration on X-axis (m/s²)
+    </ResponseField>
+    
+    <ResponseField name="accel_y" type="number">
+      Acceleration on Y-axis (m/s²)
+    </ResponseField>
+    
+    <ResponseField name="accel_z" type="number">
+      Acceleration on Z-axis (m/s²)
+    </ResponseField>
+    
+    <ResponseField name="conops" type="string">
+      Current CONOPS (Concept of Operations) state
+    </ResponseField>
+    
+    <ResponseField name="voltaje" type="number">
+      System voltage in volts
+    </ResponseField>
+    
+    <ResponseField name="corriente" type="number">
+      System current in amperes
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+**Example Usage:**
+
+```javascript
+function LaniakeaDashboard() {
+  const rawData = useWebsocket('laniakea', SOCKET_URL);
+  
+  const latestData = rawData.length > 0 ? rawData[0] : null;
+  
+  if (!latestData) return <div>Waiting for Laniakea data...</div>;
+  
+  return (
+    <div>
+      <h2>Laniakea Telemetry</h2>
+      <p>Altitude: {parseFloat(latestData.altitud) || 0} m</p>
+      <p>Acceleration: {parseFloat(latestData.aceleracion) || 0} m/s²</p>
+      <p>Voltage: {parseFloat(latestData.voltaje) || 0} V</p>
+      <p>Current: {parseFloat(latestData.corriente) || 0} A</p>
+      <p>CONOPS: {latestData.conops || 'N/A'}</p>
+    </div>
+  );
+}
+```
+
+---
+
+### ignicion-estado
+
+Ignition state notification.
+
+**Update Interval:** Event-driven (triggered by client command)
+
+**Source:** `src/websocket.js:36` (initial), `src/websocket.js:48-57` (updates)
+
+**Payload:** Object containing ignition command state
+
+<ResponseField name="payload" type="object">
+  <Expandable title="Payload Structure">
+    <ResponseField name="command" type="string | null">
+      - `"IGNICION"` - Ignition sequence active
+      - `null` - Ignition sequence inactive
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+**Example Usage:**
+
+```javascript
+import { io } from 'socket.io-client';
+import { useEffect, useState } from 'react';
+import { SOCKET_URL } from '../api/socketConfig';
+
+function IgnitionControl() {
+  const [ignitionActive, setIgnitionActive] = useState(false);
+  const [socket, setSocket] = useState(null);
+  
+  useEffect(() => {
+    const newSocket = io(SOCKET_URL);
+    setSocket(newSocket);
+    
+    newSocket.on('ignicion-estado', ({ command }) => {
+      setIgnitionActive(command === 'IGNICION');
+    });
+    
+    return () => newSocket.disconnect();
+  }, []);
+  
+  const triggerIgnition = () => {
+    if (socket) {
+      socket.emit('ignicion', { command: 'IGNICION' });
+    }
+  };
+  
+  return (
+    <div>
+      <button onClick={triggerIgnition}>Trigger Ignition</button>
+      <p>Status: {ignitionActive ? 'ACTIVE' : 'Inactive'}</p>
+    </div>
+  );
+}
+```
+
+<Warning>
+  The ignition state automatically resets to `null` after 1000ms (1 second) for safety.
+</Warning>
+
+---
+
+## Client-to-Server Events
+
+These events are sent by clients to the server.
+
+### ignicion
+
+Trigger the ignition sequence.
+
+**Source:** `src/websocket.js:48-57`
+
+**Payload:** Object with ignition command
+
+<ParamField body="command" type="string" required>
+  Must be `"IGNICION"` to trigger the ignition sequence
+</ParamField>
+
+**Behavior:**
+1. Sets global `ignicionState` to `true`
+2. Broadcasts `ignicion-estado` event with `{ command: "IGNICION" }` to all clients
+3. After 1000ms, automatically:
+   - Sets `ignicionState` to `false`
+   - Broadcasts `ignicion-estado` event with `{ command: null }` to all clients
+
+**Example Usage:**
+
+```javascript
+import { io } from 'socket.io-client';
+
+const socket = io('http://localhost:3000');
+
+// Trigger ignition
+socket.emit('ignicion', { command: 'IGNICION' });
+```
+
+<Warning>
+  This is a safety-critical command. Ensure proper authorization and validation before exposing this functionality in production.
+</Warning>
+
+---
+
+## Connection Events
+
+### connect
+
+Emitted when the client successfully connects to the server.
+
+**Example:**
+
+```javascript
+socket.on('connect', () => {
+  console.log('Connected with socket ID:', socket.id);
+});
+```
+
+### connect_error
+
+Emitted when connection fails.
+
+**Example:**
+
+```javascript
+socket.on('connect_error', (error) => {
+  console.error('Connection failed:', error.message);
+});
+```
+
+### disconnect
+
+Emitted when the client disconnects from the server.
+
+**Example:**
+
+```javascript
+socket.on('disconnect', (reason) => {
+  console.log('Disconnected:', reason);
+  
+  if (reason === 'io server disconnect') {
+    // Server forcefully disconnected, reconnect manually
+    socket.connect();
+  }
+});
+```
+
+---
+
+## Data Processing Examples
+
+<CodeGroup>
+```javascript Extract Latest Values
+const rawData = useWebsocket('nuevos-datos', SOCKET_URL);
+
+if (rawData.length > 0) {
+  const latest = rawData[0]; // Most recent record
+  
+  const altitude = parseFloat(latest.altitude) || 0;
+  const velocity = parseFloat(latest.velocity) || 0;
+  const missionState = parseInt(latest.mission_state, 10) || 0;
+}
+```
+
+```javascript Map Data for Charts
+const rawData = useWebsocket('nuevos-datos', SOCKET_URL);
+
+const chartData = {
+  time: rawData.map(d => d.time),
+  altitude: rawData.map(d => parseFloat(d.altitude) || 0),
+  temperature: rawData.map(d => parseFloat(d.temperature) || 0),
+  velocity: rawData.map(d => parseFloat(d.velocity) || 0),
+};
+```
+
+```javascript Track GPS Coordinates
+const rawData = useWebsocket('nuevos-datos', SOCKET_URL);
+
+const latestPosition = rawData.length > 0 ? {
+  lat: parseFloat(rawData[0].latitude) || 0,
+  lon: parseFloat(rawData[0].longitude) || 0,
+} : { lat: 0, lon: 0 };
+```
+</CodeGroup>

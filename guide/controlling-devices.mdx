@@ -1,0 +1,399 @@
+---
+title: Controlling Devices
+description: Execute commands and control SAFI aerospace devices remotely
+---
+
+## Overview
+
+SAFI ControlHub allows authorized users to send commands and control various aerospace devices remotely. This guide covers device selection, command execution, and safety protocols.
+
+<Warning>
+Device control features are restricted based on user roles. Ensure you have proper authorization before attempting to execute commands.
+</Warning>
+
+## Device Access
+
+### Selecting a Device
+
+<Steps>
+  <Step title="Navigate to Main Page">
+    After logging in, you'll see the "Dispositivos SAFI" (SAFI Devices) page with all available systems.
+  </Step>
+  
+  <Step title="Choose Your Device">
+    Click on the device button you want to control:
+    - **Banco de Pruebas** - Test bench control
+    - **Live Telemetry (XITZIN-II)** - Rocket monitoring and control
+    - **Filamentadora** - Filament production system
+    - **Laniakea** - Advanced propulsion system
+    - **Operaciones Híbridas** - Hybrid motor operations
+  </Step>
+  
+  <Step title="Access Control Panel">
+    The device dashboard opens with monitoring displays and control options.
+  </Step>
+</Steps>
+
+### User Permissions
+
+Different user roles have varying control access:
+
+| User Role | Access Level | Control Capabilities |
+|-----------|--------------|----------------------|
+| **Guardia** | Monitor | View telemetry, no command execution |
+| **Administrador** | Full Control | All monitoring plus command execution |
+
+<Note>
+If you attempt to access a control feature without proper permissions, you'll receive an authentication error.
+</Note>
+
+## Test Bench Control (Banco de Pruebas)
+
+The test bench allows remote control of static fire tests and engine testing.
+
+### Ignition Command
+
+The primary control function is the ignition sequence:
+
+<Steps>
+  <Step title="Prepare the System">
+    Before executing ignition:
+    - Verify all personnel are clear of the test area
+    - Confirm safety systems are armed
+    - Check fuel and oxidizer levels
+    - Ensure data recording is active
+  </Step>
+  
+  <Step title="Monitor Pre-Ignition Data">
+    Review baseline readings:
+    - **Fuerza (Force)** should be near zero
+    - **Temperatura (Temperature)** at ambient levels
+    - **Presión (Pressure)** at atmospheric baseline
+  </Step>
+  
+  <Step title="Execute Ignition">
+    Click the **"Ignición"** button in the right control panel.
+  </Step>
+  
+  <Step title="Monitor Test Execution">
+    Watch the telemetry charts respond:
+    - Force should increase rapidly during ignition
+    - Temperature will rise as combustion begins
+    - Pressure will show chamber pressure buildup
+  </Step>
+  
+  <Step title="Observe Shutdown">
+    Monitor the decay of parameters after burn completion.
+  </Step>
+</Steps>
+
+<Warning>
+**CRITICAL SAFETY NOTICE**: The ignition command immediately triggers the test sequence. Only execute when all safety protocols are confirmed and authorized personnel are in position.
+</Warning>
+
+### Command Transmission
+
+When you click the Ignition button:
+
+1. **Command Sent** - HTTP POST request to `/api/ignicion` with command: "IGNICION"
+2. **Server Processing** - Backend validates and forwards to device controller
+3. **Device Response** - Test bench receives and executes the command
+4. **Telemetry Update** - Real-time data reflects the ignition sequence
+
+<Tip>
+Watch the browser console (F12) for command confirmation messages: "Ignition command sent" indicates successful transmission.
+</Tip>
+
+### Monitoring During Operation
+
+While the test runs:
+
+- **Force Chart** - Shows thrust profile over time
+- **Temperature Chart** - Tracks thermal response
+- **Pressure Chart** - Displays chamber pressure curve
+- **Real-Time Values** - Updated multiple times per second
+- **Maximum Values** - Peak readings for post-test analysis
+
+<Note>
+All data is automatically saved to the database for later analysis and reporting.
+</Note>
+
+## XITZIN-II Rocket Control
+
+While most XITZIN-II operations are autonomous during flight, ControlHub provides monitoring and pre-flight configuration.
+
+### Pre-Flight Operations
+
+<Steps>
+  <Step title="Access Live View">
+    Navigate to "Live View (XITZIN-II)" from the main menu.
+  </Step>
+  
+  <Step title="Verify Systems">
+    Check all telemetry systems are active:
+    - GPS lock established (valid coordinates)
+    - Battery levels sufficient (>20%)
+    - Mission state shows "Preflight" (0)
+    - All sensors reporting nominal data
+  </Step>
+  
+  <Step title="Monitor Launch">
+    Watch for automatic mission state transitions as launch proceeds.
+  </Step>
+</Steps>
+
+### Video Feed Control
+
+Manage live video streams during operations:
+
+<Steps>
+  <Step title="View Active Feed">
+    The main panel displays the current video source.
+  </Step>
+  
+  <Step title="Switch Cameras">
+    Click **"Cambiar Feed"** to cycle through available video sources:
+    - Camera 1: Primary launch view
+    - Camera 2: Secondary angle
+    - Standby image: When video unavailable
+  </Step>
+  
+  <Step title="Monitor Quality">
+    Video streams automatically adjust quality based on connection speed.
+  </Step>
+</Steps>
+
+<Tip>
+Use the video feed switcher to get the best view during different mission phases (e.g., switch to tracking camera after liftoff).
+</Tip>
+
+### Altitude Simulation
+
+Test the altitude visualization system:
+
+<Steps>
+  <Step title="Access Live View">
+    Open the XITZIN-II Live View dashboard.
+  </Step>
+  
+  <Step title="Start Simulation">
+    Click **"Iniciar Simulación"** to begin the test sequence.
+  </Step>
+  
+  <Step title="Watch Simulation">
+    The system simulates:
+    - 20-second ascent to 3000 meters
+    - 2-second pause at apogee
+    - 20-second descent to ground level
+  </Step>
+  
+  <Step title="Stop if Needed">
+    Click **"Detener Simulación"** to halt the test.
+  </Step>
+</Steps>
+
+<Note>
+The simulation mode is for testing displays and training. It does not affect the actual rocket or transmit commands to the hardware.
+</Note>
+
+## Data Commands
+
+Some operations involve sending data updates to devices:
+
+### Battery Management
+
+Administrators can update battery configuration:
+
+```javascript
+// Example battery update structure
+{
+  battery_id: 1,
+  battery_level: 85,
+  voltage: 4.15,
+  temperature: 23
+}
+```
+
+<Steps>
+  <Step title="Access Battery Panel">
+    View current battery status in the telemetry dashboard.
+  </Step>
+  
+  <Step title="Review Status">
+    Check battery levels, voltages, and temperatures.
+  </Step>
+  
+  <Step title="Update if Needed">
+    Use API endpoints to update battery parameters (requires administrator access).
+  </Step>
+</Steps>
+
+## Safety Protocols
+
+### Pre-Command Checklist
+
+Before executing any control command:
+
+- [ ] Verify user authorization and role permissions
+- [ ] Confirm safety systems are active
+- [ ] Check all personnel are in safe positions
+- [ ] Review current telemetry for nominal conditions
+- [ ] Ensure communication link is stable
+- [ ] Have abort procedures ready
+- [ ] Confirm data recording is active
+
+<Warning>
+**NEVER execute commands without proper authorization and safety clearance. Unauthorized operation of aerospace equipment can result in injury, property damage, and legal consequences.**
+</Warning>
+
+### Emergency Procedures
+
+If issues occur during operation:
+
+1. **Abort Command** - Use emergency stop if available
+2. **Monitor Status** - Watch telemetry for fault indicators
+3. **Document Event** - Note timestamp and conditions
+4. **Contact Support** - Report issues to system administrator
+5. **Safe State** - Ensure device returns to safe configuration
+
+<Note>
+All commands are logged with user ID, timestamp, and device state for audit and safety review.
+</Note>
+
+## Command Reference
+
+### Available Commands
+
+| Command | Endpoint | Device | Function |
+|---------|----------|--------|----------|
+| Ignition | POST /api/ignicion | Banco de Pruebas | Trigger test bench ignition |
+| Post Data | POST /api/data | AKBAL-II | Send telemetry data |
+| Post Banco | POST /api/bancodepruebas | Test Bench | Update test bench data |
+| Post Laniakea | POST /api/laniakea | Laniakea | Send Laniakea system data |
+| Update Batteries | POST /api/batteries | AKBAL-II | Update battery status |
+| Update XITZIN-II Batteries | POST /api/xitzin2batteries | XITZIN-II | Update rocket battery status |
+
+### Command Format
+
+Commands follow a standard JSON structure:
+
+```json
+{
+  "command": "COMMAND_NAME",
+  "parameters": {
+    "param1": "value1",
+    "param2": "value2"
+  },
+  "timestamp": "2026-03-09T12:00:00Z"
+}
+```
+
+<Tip>
+Use the browser's Network tab (F12 → Network) to inspect command transmission and server responses.
+</Tip>
+
+## Troubleshooting
+
+### Command Not Executing
+
+**Possible Causes:**
+- Insufficient user permissions (Guardia role cannot execute commands)
+- Network connection lost
+- Device offline or not responding
+- Invalid command format
+
+**Solutions:**
+1. Verify your user role is Administrator
+2. Check network connection and reload page
+3. Confirm device is powered and connected
+4. Review browser console for error messages
+
+### Authentication Errors
+
+**Error Message:** "Authentication required" or "Insufficient permissions"
+
+**Solution:**
+- Ensure you're logged in with Administrator credentials
+- Check session hasn't expired (24-hour limit)
+- Log out and log back in to refresh token
+
+### Command Delayed
+
+**Symptoms:**
+- Button click doesn't immediately show result
+- Telemetry doesn't update after command
+
+**Solutions:**
+- Check network latency (ping server)
+- Verify device is responding to other commands
+- Monitor WebSocket connection status
+- Wait for command timeout (typically 30 seconds)
+
+### Device Not Responding
+
+**Steps to Resolve:**
+1. Check device power and network connection
+2. Verify telemetry data is being received
+3. Try a simple status query command
+4. Contact device operator for hardware status
+5. Review device logs for fault conditions
+
+<Warning>
+If a device fails to respond to multiple commands, do NOT continue sending commands. Contact the system administrator and device operator immediately.
+</Warning>
+
+## Best Practices
+
+### Operational Guidelines
+
+1. **Always Monitor First** - Observe telemetry before sending commands
+2. **Single Command** - Execute one command at a time
+3. **Wait for Completion** - Allow previous command to finish
+4. **Document Actions** - Keep log of commands executed
+5. **Coordinate Team** - Communicate with operators before commands
+
+### Training and Certification
+
+<Note>
+Before being granted command execution privileges:
+- Complete ControlHub training program
+- Understand device operation and safety systems
+- Practice with simulation modes
+- Demonstrate proficiency to system administrator
+</Note>
+
+### Logging and Accountability
+
+All control actions are logged with:
+- User ID and username
+- Timestamp (UTC)
+- Command type and parameters
+- Device ID and state
+- Command result (success/failure)
+
+<Tip>
+Administrators can review command logs to audit operations and investigate incidents.
+</Tip>
+
+## Advanced Features
+
+### Scripted Operations
+
+For advanced users, command sequences can be automated (contact administrator for API access):
+
+```javascript
+// Example: Automated test sequence
+await sendCommand('ARM_SYSTEM');
+await delay(5000);
+await sendCommand('IGNITION');
+await monitorUntil('test_complete');
+await sendCommand('DISARM_SYSTEM');
+```
+
+### Batch Commands
+
+Multiple devices can be controlled simultaneously for complex operations (requires special authorization).
+
+<Warning>
+Automated and batch commands require additional training and administrator approval. Contact your system administrator for access.
+</Warning>

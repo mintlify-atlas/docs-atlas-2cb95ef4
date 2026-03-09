@@ -1,0 +1,318 @@
+---
+title: 'WebSocket API Overview'
+description: 'Real-time communication using Socket.io for live telemetry data'
+---
+
+## Overview
+
+SAFI ControlHub uses Socket.io for real-time bidirectional communication between the server and clients. The WebSocket connection provides live telemetry updates from multiple rocket systems including Xitzin-II and Laniakea.
+
+## Connection Setup
+
+### Server Configuration
+
+The WebSocket server is initialized on the same port as the HTTP server (default: 3000) with CORS enabled for all origins.
+
+**File:** `src/websocket.js:17-18`
+```javascript
+import { Server } from "socket.io";
+
+export function initWebSocket(server) {
+  io = new Server(server, { cors: { origin: "*" } });
+  // ...
+}
+```
+
+**File:** `src/index.js:6-11`
+```javascript
+import { createServer } from "http";
+import { initWebSocket } from "./websocket.js";
+
+const server = createServer(app);
+initWebSocket(server);
+
+server.listen(PORT, () =>
+  console.log("Servidor HTTP + WS corriendo en puerto", PORT)
+);
+```
+
+### Client Connection
+
+#### Configuration
+
+The default WebSocket URL is configured in `frontend/src/api/socketConfig.js:2`:
+
+```javascript
+export const SOCKET_URL = 'http://localhost:3000';
+```
+
+<Note>
+  Update `SOCKET_URL` to match your server's hostname and port in production.
+</Note>
+
+#### Using the WebSocket Hook
+
+SAFI ControlHub provides a React hook for easy WebSocket integration:
+
+**File:** `frontend/src/api/useWebsocket.js`
+
+<CodeGroup>
+```javascript Basic Usage
+import useWebsocket from '../api/useWebsocket';
+import { SOCKET_URL } from '../api/socketConfig';
+
+function MyComponent() {
+  const payload = useWebsocket('nuevos-datos', SOCKET_URL);
+  
+  // payload contains the latest data from the server
+  console.log(payload);
+  
+  return (
+    <div>
+      {payload.map(item => (
+        <div key={item.id}>{item.altitude}</div>
+      ))}
+    </div>
+  );
+}
+```
+
+```javascript Multiple Channels
+import useWebsocket from '../api/useWebsocket';
+import { SOCKET_URL } from '../api/socketConfig';
+
+function Dashboard() {
+  // Subscribe to multiple channels
+  const telemetryData = useWebsocket('nuevos-datos', SOCKET_URL);
+  const batteryData = useWebsocket('baterias', SOCKET_URL);
+  const laniakeaData = useWebsocket('laniakea', SOCKET_URL);
+  
+  return (
+    <div>
+      <h2>Telemetry: {telemetryData.length} records</h2>
+      <h2>Batteries: {batteryData.length} batteries</h2>
+      <h2>Laniakea: {laniakeaData.length} records</h2>
+    </div>
+  );
+}
+```
+
+```javascript Custom Socket.io Client
+import { io } from 'socket.io-client';
+import { useEffect, useState } from 'react';
+
+function CustomComponent() {
+  const [data, setData] = useState([]);
+  
+  useEffect(() => {
+    const socket = io('http://localhost:3000');
+    
+    socket.on('connect', () => {
+      console.log('Connected:', socket.id);
+    });
+    
+    socket.on('nuevos-datos', (payload) => {
+      console.log('Received data:', payload.length);
+      setData(payload);
+    });
+    
+    socket.on('connect_error', (err) => {
+      console.error('Connection error:', err);
+    });
+    
+    return () => {
+      socket.disconnect();
+    };
+  }, []);
+  
+  return <div>Data: {data.length} records</div>;
+}
+```
+</CodeGroup>
+
+## Connection Lifecycle
+
+### On Connection
+
+When a client connects, the server immediately sends the latest data from all channels:
+
+**File:** `src/websocket.js:20-46`
+
+```javascript
+io.on("connection", (socket) => {
+  console.log("WS conectado:", socket.id);
+
+  (async () => {
+    // Fetch latest data from all tables
+    const data = await pool.query("SELECT * FROM data ORDER BY date DESC, time DESC LIMIT 150");
+    const banco = await pool.query("SELECT * FROM prueba_estatica_0 ORDER BY id DESC LIMIT 100");
+    const laniakea = await pool.query("SELECT * FROM datos_laniakea ORDER BY date DESC, time DESC LIMIT 100");
+    const x2data = await pool.query("SELECT * FROM xitzin_2_data");
+    const bats = await pool.query("SELECT * FROM battery_status");
+    const x2bats = await pool.query("SELECT * FROM xitzin_2_batteries");
+
+    // Emit initial data to the newly connected client
+    socket.emit("nuevos-datos", data.rows);
+    socket.emit("banco-datos", banco.rows);
+    socket.emit("xitzin2-datos", x2data.rows);
+    socket.emit("baterias", bats.rows);
+    socket.emit("xitzin2-baterias", x2bats.rows);
+    socket.emit("ignicion-estado", { command: ignicionState ? "IGNICION" : null });
+    socket.emit("laniakea", laniakea.rows);
+  })().catch(console.error);
+});
+```
+
+<Info>
+  Upon connection, clients receive historical data to populate dashboards immediately, followed by real-time updates.
+</Info>
+
+### On Disconnect
+
+**File:** `src/websocket.js:59-61`
+
+```javascript
+socket.on("disconnect", () => {
+  console.log("WS desconectado:", socket.id);
+});
+```
+
+## Smart Update Detection
+
+The server uses timestamp-based change detection to avoid unnecessary emissions:
+
+**File:** `src/websocket.js:7-15`
+
+```javascript
+// Track last emitted timestamp for each channel
+const lastTimestamps = {
+  "nuevos-datos": null,
+  "banco-datos": null,
+  "xitzin2-datos": null,
+  "baterias": null,
+  "xitzin2-baterias": null,
+  "laniakea": null,
+};
+```
+
+**File:** `src/websocket.js:64-74`
+
+```javascript
+// Only emit if data has changed
+const emitIfNew = async ({ query, channel, getLast }) => {
+  const { rows } = await pool.query(query);
+  if (rows.length === 0) return;
+
+  const newTimestamp = getLast(rows);
+  if (newTimestamp !== lastTimestamps[channel]) {
+    io.emit(channel, rows);
+    lastTimestamps[channel] = newTimestamp;
+  }
+};
+```
+
+<Tip>
+  This optimization reduces network traffic by only sending updates when data actually changes.
+</Tip>
+
+## Available Channels
+
+See [Real-Time Data Channels](/api/real-time-channels) for a complete list of all WebSocket channels and their update intervals.
+
+## Event Handling
+
+See [WebSocket Events](/api/websocket-events) for detailed information about all events and their payloads.
+
+## Error Handling
+
+<CodeGroup>
+```javascript Connection Errors
+import { io } from 'socket.io-client';
+
+const socket = io(SOCKET_URL);
+
+socket.on('connect_error', (error) => {
+  console.error('Failed to connect:', error.message);
+  // Implement reconnection logic or user notification
+});
+
+socket.on('disconnect', (reason) => {
+  console.warn('Disconnected:', reason);
+  if (reason === 'io server disconnect') {
+    // Server forcefully disconnected, reconnect manually
+    socket.connect();
+  }
+});
+```
+
+```javascript Data Validation
+import useWebsocket from '../api/useWebsocket';
+import { SOCKET_URL } from '../api/socketConfig';
+
+function SafeComponent() {
+  const rawData = useWebsocket('nuevos-datos', SOCKET_URL);
+  
+  // Always validate data before use
+  const altitude = rawData.length > 0 
+    ? parseFloat(rawData[0].altitude) || 0 
+    : 0;
+    
+  const temperature = rawData.length > 0
+    ? parseFloat(rawData[0].temperature) || 0
+    : 0;
+  
+  return (
+    <div>
+      <p>Altitude: {altitude} m</p>
+      <p>Temperature: {temperature} °C</p>
+    </div>
+  );
+}
+```
+</CodeGroup>
+
+## Best Practices
+
+<AccordionGroup>
+  <Accordion title="Always clean up socket connections">
+    ```javascript
+    useEffect(() => {
+      const socket = io(SOCKET_URL);
+      
+      // ... setup listeners
+      
+      return () => {
+        socket.disconnect();
+      };
+    }, []);
+    ```
+  </Accordion>
+
+  <Accordion title="Use the provided useWebsocket hook">
+    The `useWebsocket` hook automatically handles connection lifecycle, event listeners, and cleanup.
+    
+    ```javascript
+    // Recommended
+    const data = useWebsocket('nuevos-datos', SOCKET_URL);
+    
+    // Not recommended (unless you need custom behavior)
+    const socket = io(SOCKET_URL);
+    socket.on('nuevos-datos', ...);
+    ```
+  </Accordion>
+
+  <Accordion title="Validate and parse all incoming data">
+    Always use `parseFloat()` or `parseInt()` with fallback values:
+    
+    ```javascript
+    const altitude = rawData.map(d => parseFloat(d.altitude) || 0);
+    const mission_state = rawData.map(d => parseInt(d.mission_state, 10) || 0);
+    ```
+  </Accordion>
+
+  <Accordion title="Handle empty or missing data gracefully">
+    ```javascript
+    const latestValue = data.length > 0 ? data[0].altitude : 'N/A';
+    ```
+  </Accordion>
+</AccordionGroup>

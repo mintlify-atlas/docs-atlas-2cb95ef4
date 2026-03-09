@@ -1,0 +1,246 @@
+---
+title: Banco de Pruebas (Test Bench)
+description: Static test bench for rocket motor thrust characterization
+---
+
+The Banco de Pruebas is a static test stand for measuring rocket motor performance during ground testing.
+
+## Overview
+
+The test bench provides real-time monitoring of:
+
+- **Thrust (Fuerza)** - Motor thrust in Newtons
+- **Temperature** - Chamber/nozzle temperature
+- **Pressure** - Combustion chamber pressure
+- **Remote Ignition** - Wireless ignition trigger
+
+## Data Streams
+
+### Telemetry Channel: `banco-datos`
+
+**WebSocket Channel:** `banco-datos`  
+**Update Rate:** 500ms  
+**Database Table:** `prueba_estatica_0`  
+**Endpoint:** `GET/POST /api/bancodepruebas`
+
+<Accordion title="Data Fields">
+
+| Field | Type | Description | Units |
+|-------|------|-------------|-------|
+| `id` | integer | Sequential record ID | - |
+| `date` | string | Timestamp date | - |
+| `time` | string | Timestamp time | - |
+| `fuerza` | float | Measured thrust force | Ns (Newton-seconds) |
+| `temperatura` | float | Temperature reading | °C |
+| `presion` | float | Chamber pressure | Psi |
+| `id_prueba` | integer | Test sequence identifier | - |
+
+</Accordion>
+
+### Ignition Command Channel
+
+**WebSocket Channel:** `ignicion-estado`  
+**Endpoint:** `POST /api/ignicion` (send), `GET /api/ignicion` (check)
+
+<Accordion title="Ignition Protocol">
+
+**Command Format:**
+```json
+{
+  "command": "IGNICION"
+}
+```
+
+**State Broadcast:**
+When ignition is triggered, the backend:
+1. Broadcasts `{ command: "IGNICION" }` to all clients
+2. Waits 1000ms
+3. Broadcasts `{ command: null }` to reset state
+
+**Implementation:** `src/websocket.js:48-56`
+
+</Accordion>
+
+## Monitoring Features
+
+### Real-Time Charts
+
+Three D3.js line charts display live data:
+
+<CardGroup cols={3}>
+  <Card title="Fuerza (Thrust)" icon="arrow-up">
+    Newton-seconds over time
+    Color: `#61DAFB` (cyan)
+  </Card>
+  
+  <Card title="Temperatura" icon="temperature-high">
+    Temperature (°C) over time
+    Color: `#50C878` (emerald green)
+  </Card>
+  
+  <Card title="Presión" icon="gauge-high">
+    Pressure (Psi) over time
+    Color: `#FFB74D` (orange)
+  </Card>
+</CardGroup>
+
+**Chart Specifications:**
+- Width: 670px (desktop), 300px (mobile)
+- Height: 300px
+- Margins: top 40px, right 10px, bottom 15px, left 40px
+- X-axis: Sample index (reversed, newest on left)
+- Y-axis: Auto-scaled to max value
+
+**Location:** `frontend/src/pages/Banco.jsx:57-85`
+
+### Real-Time Data Panel
+
+Displays latest values for:
+- **FUERZA** - Current thrust (Ns)
+- **PRESION** - Current pressure (Psi)
+- **TEMPERATURA** - Current temperature (°C)
+
+Shows most recent value (index 0) with 2 decimal places.
+
+### Maximum Values Panel
+
+Tracks peak values during test:
+- **Máx FUERZA** - Peak thrust recorded
+- **Máx PRESION** - Peak pressure recorded
+- **Máx TEMPERATURA** - Peak temperature recorded
+
+Calculated using `Math.max()` on entire dataset.
+
+**Location:** `frontend/src/pages/Banco.jsx:128-135`
+
+### Ignition Control
+
+**Button:** "Ignición"  
+**Function:** Sends `POST /api/ignicion` with `{ command: "IGNICION" }`  
+**Styling:** SpaceX-inspired gradient button
+
+```javascript
+const handleIgnition = async () => {
+  try {
+    await axios.post(`${baseURL}/ignicion`, { command: "IGNICION" });
+    console.log("Ignition command sent");
+  } catch (error) {
+    console.error("Error sending ignition command:", error);
+  }
+};
+```
+
+**Location:** `frontend/src/pages/Banco.jsx:36-43`
+
+## Hardware Communication
+
+The test bench uses Arduino connected via USB serial.
+
+### Python Data Bridge
+
+**Script:** `src/arduino/bancodepruebas.py`  
+**Serial Port:** `/dev/ttyACM0`  
+**Baud Rate:** 9600
+
+<Accordion title="Serial Data Format">
+
+Arduino sends comma-separated values:
+
+```
+fuerza,temperatura,valor2,valor3,presion
+```
+
+The Python script parses indices:
+- `valores[0]` → `fuerza`
+- `valores[1]` → `temperatura`
+- `valores[4]` → `presion`
+
+**Payload Construction:**
+```python
+data = {
+    "id_prueba": 0,
+    "fuerza": float(valores[0]),
+    "temperatura": float(valores[1]),
+    "presion": float(valores[4])
+}
+```
+
+**Location:** `src/arduino/bancodepruebas.py:58-65`
+
+</Accordion>
+
+<Accordion title="Ignition Command Polling">
+
+The Python script continuously polls `GET /api/ignicion` to check for ignition commands:
+
+```python
+def check_for_ignition_command():
+    try:
+        response = requests.get(server_url_command)
+        if response.status_code == 200:
+            command = response.json().get("command")
+            if command == "IGNICION":
+                print("Comando de ignición recibido desde el servidor")
+                ser.write("IGNICION".encode('utf-8'))  # Send to Arduino
+                return True
+        return False
+    except Exception as e:
+        print(f"Error al consultar el comando de ignición: {e}")
+        return False
+```
+
+**Location:** `src/arduino/bancodepruebas.py:39-51`
+
+</Accordion>
+
+### WebSocket Bridge
+
+The Python script maintains a WebSocket connection for real-time data push:
+
+```python
+ws = websocket.WebSocket()
+ws.connect("ws://192.168.100.18:8081")
+
+# On data receive:
+ws.send(json.dumps(data))
+```
+
+<Warning>
+The WebSocket connection in `bancodepruebas.py` appears to be a separate WebSocket server (port 8081), not the main Socket.io server. This may be legacy code.
+</Warning>
+
+## Data Flow
+
+1. Arduino reads load cell, thermocouple, and pressure sensor
+2. Arduino sends `fuerza,temperatura,_,_,presion` via serial
+3. Python script parses and posts to `POST /api/bancodepruebas`
+4. Backend stores in `prueba_estatica_0` table
+5. WebSocket broadcasts on `banco-datos` channel every 500ms
+6. Frontend dashboard updates charts in real-time
+
+### Ignition Flow
+
+1. User clicks "Ignición" button in dashboard
+2. Frontend sends `POST /api/ignicion` with `{command: "IGNICION"}`
+3. Backend sets `ignicionState = true` and broadcasts to all clients
+4. Python script polling loop receives command
+5. Python script sends `"IGNICION"` string to Arduino via serial
+6. Arduino triggers igniter circuit
+7. Backend auto-resets ignition state after 1 second
+
+## WebSocket Subscription
+
+```javascript
+// frontend/src/pages/Banco.jsx:45
+const rawData = useWebsocket('banco-datos', SOCKET_URL);
+```
+
+Data is processed in `useEffect` hook (lines 46-55) and mapped to state.
+
+## Source Code References
+
+- **Frontend Dashboard:** `frontend/src/pages/Banco.jsx`
+- **Python Bridge:** `src/arduino/bancodepruebas.py`
+- **API Routes:** `src/routes/data.routes.js:29-37`
+- **WebSocket Handler:** `src/websocket.js:48-56, 82-86`
+- **Database Table:** `prueba_estatica_0`

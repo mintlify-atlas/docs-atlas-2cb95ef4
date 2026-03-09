@@ -1,0 +1,323 @@
+---
+title: Monitoring Telemetry Data
+description: Real-time monitoring of rocket telemetry, test bench data, and device metrics
+---
+
+## Overview
+
+SAFI ControlHub provides real-time telemetry monitoring for various aerospace devices including rockets, test benches, and hybrid propulsion systems. This guide shows you how to monitor live data streams and interpret telemetry information.
+
+## Available Telemetry Systems
+
+ControlHub supports monitoring for multiple devices:
+
+- **XITZIN-II Rocket** - Live flight telemetry and tracking
+- **Banco de Pruebas** - Test bench force, temperature, and pressure monitoring
+- **Filamentadora** - Filament production monitoring
+- **Laniakea** - Advanced aerospace system telemetry
+- **Hybrid Operations** - Hybrid rocket motor operations
+
+<Note>
+All telemetry data is transmitted in real-time via WebSocket connections for instant updates.
+</Note>
+
+## Accessing Telemetry Dashboards
+
+<Steps>
+  <Step title="Log in to ControlHub">
+    Sign in with your credentials to access the main dashboard.
+  </Step>
+  
+  <Step title="Select Your Device">
+    From the main page (Dispositivos SAFI), choose the device you want to monitor:
+    - Click "Live Telemetry (XITZIN-II)" for rocket data
+    - Click "Banco de Pruebas" for test bench monitoring
+    - Select other devices as needed
+  </Step>
+  
+  <Step title="View Live Data">
+    The telemetry dashboard will open, displaying real-time data streams and visualizations.
+  </Step>
+</Steps>
+
+## XITZIN-II Rocket Telemetry
+
+### Live Telemetry Dashboard
+
+The XITZIN-II Live Telemetry page displays comprehensive flight data:
+
+#### Real-Time Metrics
+
+Monitor these live parameters:
+
+- **Timestamp** - Current date and time of data transmission
+- **Latitude/Longitude** - GPS coordinates of rocket position
+- **Velocity** - Current speed in km/h
+- **Altitude** - Height above ground in meters
+- **Temperature** - External temperature in °C
+- **Pressure** - Atmospheric pressure
+- **CONOPS** - Current mission state (0-5)
+
+<Tip>
+All metrics update automatically as new data arrives. No page refresh is required.
+</Tip>
+
+#### Telemetry Charts
+
+Four dynamic line charts visualize key parameters:
+
+1. **Altitude Chart** - Track altitude changes over time
+2. **Velocity Chart** - Monitor speed variations
+3. **Pressure Chart** - View atmospheric pressure readings
+4. **Temperature Chart** - Track temperature changes
+
+<Note>
+Charts automatically scale to show the full range of received data, with the most recent values on the left.
+</Note>
+
+#### GPS Location Tracking
+
+The built-in map shows:
+
+- **Current Position** - Real-time rocket location marker
+- **Coordinates Display** - Exact latitude/longitude in popup
+- **Auto-centering** - Map automatically centers on the rocket's position
+
+<Steps>
+  <Step title="View on Map">
+    The map displays in the left panel with the current GPS coordinates.
+  </Step>
+  
+  <Step title="Interact with Marker">
+    Click the map marker to see exact coordinates in a popup.
+  </Step>
+  
+  <Step title="Track Movement">
+    The map automatically updates and re-centers as the rocket moves.
+  </Step>
+</Steps>
+
+#### Flight Phases
+
+Monitor mission progress through six defined phases:
+
+| Phase | Description | State ID |
+|-------|-------------|----------|
+| Preflight | Pre-launch preparations | 0 |
+| Lift-off | Launch and initial ascent | 1 |
+| Apogee | Maximum altitude reached | 2 |
+| Drogue | Drogue parachute deployed | 3 |
+| Main | Main parachute deployed | 4 |
+| Land | Touchdown completed | 5 |
+
+The active phase is highlighted in blue with "Active" status.
+
+<Warning>
+The CONOPS (mission state) value is transmitted directly from the flight computer and indicates the current operational phase.
+</Warning>
+
+#### Battery Status
+
+Monitor up to 5 battery packs with:
+
+- **Battery ID** - Unique identifier for each battery
+- **Battery Level** - Percentage charge (0-100%)
+- **Voltage** - Current voltage reading
+- **Temperature** - Battery temperature in °C
+
+<Note>
+Batteries below 50% charge are indicated with a red progress bar instead of blue.
+</Note>
+
+### Live View Dashboard
+
+The XITZIN-II Live View provides enhanced visualization:
+
+#### Video Feed
+
+- **Live Stream** - Real-time video from the rocket or ground station
+- **Multiple Feeds** - Switch between different camera angles
+- **Standby Image** - Displays when video is unavailable
+
+<Steps>
+  <Step title="Watch Live Feed">
+    The main video player shows the active camera feed.
+  </Step>
+  
+  <Step title="Change Feed">
+    Click "Cambiar Feed" button to cycle through available video sources.
+  </Step>
+</Steps>
+
+#### Altitude Visualization
+
+A specialized vertical altimeter shows:
+
+- **Current Altitude** - Large numeric display
+- **Scale Markers** - Major ticks every 10m, minor ticks every 2m
+- **Pointer Indicator** - Visual reference for current height
+- **Auto-scaling** - Display adjusts to show ±100m around current altitude
+
+<Tip>
+Click "Iniciar Simulación" to run a test simulation showing ascent to 3000m and descent.
+</Tip>
+
+#### 3D Rocket Orientation
+
+The Rocket Orientation panel displays:
+
+- **Live 3D Model** - Real-time rocket visualization
+- **Attitude Indication** - Pitch and roll angles
+- **Animated Movement** - Smooth rotation based on sensor data
+
+## Banco de Pruebas (Test Bench)
+
+Monitor static fire tests and engine performance:
+
+### Test Bench Metrics
+
+<Steps>
+  <Step title="Access Test Bench">
+    Click "Banco de Pruebas" from the main device menu.
+  </Step>
+  
+  <Step title="Monitor Parameters">
+    View three critical parameters in real-time:
+    - **Fuerza (Force)** - Thrust force in Newtons (Ns)
+    - **Temperatura (Temperature)** - Engine temperature in °C
+    - **Presión (Pressure)** - Chamber pressure in Psi
+  </Step>
+  
+  <Step title="View Charts">
+    Three line charts display historical data for force, temperature, and pressure.
+  </Step>
+</Steps>
+
+### Real-Time Data Panel
+
+The right sidebar shows:
+
+- **Current Values** - Latest readings for all three metrics
+- **Maximum Values** - Peak values recorded during the session
+- **Color Coding** - Each metric has a unique color (Force: cyan, Temperature: green, Pressure: orange)
+
+### Ignition Control
+
+<Warning>
+The Ignition button sends a command to trigger the test bench ignition sequence. Only use this when authorized and all safety protocols are in place.
+</Warning>
+
+<Steps>
+  <Step title="Prepare Test">
+    Ensure all safety checks are completed and personnel are clear.
+  </Step>
+  
+  <Step title="Click Ignition">
+    Press the red "Ignición" button in the control panel.
+  </Step>
+  
+  <Step title="Monitor Results">
+    Watch the force, temperature, and pressure charts respond to the ignition.
+  </Step>
+</Steps>
+
+## Understanding the Data
+
+### WebSocket Data Streams
+
+All telemetry uses WebSocket connections for:
+
+- **Real-time Updates** - Sub-second latency
+- **Automatic Reconnection** - Maintains connection if interrupted
+- **Efficient Transfer** - Only changed data is transmitted
+
+<Note>
+The platform uses different WebSocket channels:
+- `nuevos-datos` - XITZIN-II flight telemetry
+- `baterias` - Battery status updates
+- `banco-datos` - Test bench measurements
+</Note>
+
+### Data Interpretation
+
+#### Altitude Readings
+
+- **Source**: Barometric pressure sensor and GPS
+- **Units**: Meters above ground level
+- **Accuracy**: ±2-5 meters depending on conditions
+- **Update Rate**: Multiple times per second
+
+#### Velocity Calculations
+
+- **Source**: Derived from GPS and accelerometer data
+- **Units**: Kilometers per hour (km/h)
+- **Components**: Combined horizontal and vertical velocity
+
+#### Mission State Values
+
+The CONOPS/mission_state integer indicates:
+
+```
+0 = Preflight (on pad, ready for launch)
+1 = Lift-off (active ascent)
+2 = Apogee (peak altitude reached)
+3 = Drogue (drogue chute deployed, descending)
+4 = Main (main chute deployed, slow descent)
+5 = Land (touchdown detected)
+```
+
+<Tip>
+Monitor the mission state transitions to understand flight progress. Transitions should follow the sequence 0→1→2→3→4→5.
+</Tip>
+
+### Chart Features
+
+All telemetry charts include:
+
+- **Auto-scaling Y-axis** - Adjusts to show full data range
+- **Time-based X-axis** - Most recent data on the left
+- **Grid Lines** - Easy reading of values
+- **Responsive Design** - Adapts to screen size
+
+## Troubleshooting
+
+### No Data Appearing
+
+- **Check Connection** - Ensure device is powered and transmitting
+- **Verify WebSocket** - Connection status shown in browser console
+- **Refresh Page** - Reload to re-establish WebSocket connection
+- **Check Permissions** - Ensure your user role has access to the device
+
+### Delayed Updates
+
+- **Network Latency** - Check your internet connection speed
+- **Server Load** - High traffic may cause delays
+- **Browser Performance** - Close unnecessary tabs
+
+### Charts Not Rendering
+
+- **Clear Cache** - Browser cache may have outdated resources
+- **Update Browser** - Ensure you're using a modern browser version
+- **Check Console** - Look for JavaScript errors in developer tools
+
+### Map Not Loading
+
+- **GPS Signal** - Device must have valid GPS lock
+- **Coordinates** - Verify latitude/longitude values are valid
+- **Map Tiles** - Check internet connection for OpenStreetMap tiles
+
+<Warning>
+If telemetry data appears frozen or outdated, check the timestamp display. If not updating, refresh the page to re-establish the connection.
+</Warning>
+
+## Best Practices
+
+- **Monitor All Metrics** - Don't rely on a single data point
+- **Watch for Anomalies** - Sudden changes may indicate issues
+- **Record Session Data** - Use browser tools to capture important tests
+- **Multiple Displays** - Use separate screens for different telemetry views
+- **Stable Connection** - Use wired internet for critical operations
+
+<Tip>
+Keep the telemetry dashboard open in a dedicated browser window for uninterrupted monitoring during operations.
+</Tip>

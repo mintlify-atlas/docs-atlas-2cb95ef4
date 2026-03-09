@@ -1,0 +1,245 @@
+---
+title: Local Development Setup
+description: Set up your local development environment for SAFI ControlHub
+---
+
+This guide will walk you through setting up SAFI ControlHub for local development. The application consists of a Node.js backend with Express and a React frontend built with Vite.
+
+## Prerequisites
+
+Before you begin, ensure you have the following installed:
+
+- **Node.js** (v16 or higher)
+- **npm** or **yarn** package manager
+- **PostgreSQL** (v12 or higher)
+- **Git** for version control
+
+## Repository Setup
+
+<Steps>
+  <Step title="Clone the repository">
+    Clone the SAFI ControlHub repository to your local machine:
+    
+    ```bash
+    git clone <repository-url>
+    cd safi-controlhub
+    ```
+  </Step>
+
+  <Step title="Install backend dependencies">
+    Install the required Node.js packages for the backend:
+    
+    <CodeGroup>
+    ```bash npm
+    npm install
+    ```
+    
+    ```bash yarn
+    yarn install
+    ```
+    </CodeGroup>
+
+    **Key Backend Dependencies:**
+    - `express` (v4.18.2) - Web framework
+    - `pg` (v8.11.1) - PostgreSQL client
+    - `socket.io` (v4.8.1) - Real-time WebSocket communication
+    - `jsonwebtoken` (v9.0.0) - JWT authentication
+    - `bcrypt` (v5.1.0) - Password hashing
+    - `serialport` (v12.0.0) - Serial port communication for hardware
+    - `zod` (v3.21.4) - Schema validation
+    - `@nivo/bar` (v0.99.0) - Data visualization
+    - `@react-three/fiber` & `@react-three/drei` - 3D rendering
+  </Step>
+
+  <Step title="Install frontend dependencies">
+    Navigate to the frontend directory and install dependencies:
+    
+    ```bash
+    cd frontend
+    ```
+    
+    <CodeGroup>
+    ```bash npm
+    npm install
+    ```
+    
+    ```bash yarn
+    yarn install
+    ```
+    </CodeGroup>
+
+    **Key Frontend Dependencies:**
+    - `react` (v18.3.1) & `react-dom` (v18.3.1)
+    - `vite` (v4.5.3) - Build tool and dev server
+    - `@mui/material` (v5.15.16) - Material UI components
+    - `@mui/x-data-grid` (v7.3.2) - Advanced data grid
+    - `@mui/x-charts` (v7.3.2) - Chart components
+    - `socket.io-client` (v4.8.1) - WebSocket client
+    - `axios` (v1.4.0) - HTTP client
+    - `react-router-dom` (v6.23.0) - Routing
+    - `react-leaflet` (v4.2.1) - Map integration
+    - `tailwindcss` (v3.3.2) - Utility-first CSS
+    - `@tremor/react` (v3.16.2) - Dashboard components
+  </Step>
+
+  <Step title="Configure environment variables">
+    Set up your environment variables for both backend and database configuration.
+    
+    See [Environment Variables](/development/environment-variables) for detailed configuration.
+  </Step>
+
+  <Step title="Set up the database">
+    Initialize the PostgreSQL database with the required schema.
+    
+    See [Database Setup](/development/database-setup) for step-by-step instructions.
+  </Step>
+</Steps>
+
+## Running the Application
+
+<Steps>
+  <Step title="Start the backend server">
+    From the root directory, start the backend development server:
+    
+    <CodeGroup>
+    ```bash npm (development)
+    npm run dev
+    ```
+    
+    ```bash npm (production)
+    npm start
+    ```
+    
+    ```bash yarn (development)
+    yarn dev
+    ```
+    
+    ```bash yarn (production)
+    yarn start
+    ```
+    </CodeGroup>
+
+    The backend uses **nodemon** in development mode for automatic reloading on file changes.
+    
+    Default server address: `http://localhost:3000`
+  </Step>
+
+  <Step title="Start the frontend development server">
+    In a new terminal, navigate to the frontend directory and start Vite:
+    
+    ```bash
+    cd frontend
+    ```
+    
+    <CodeGroup>
+    ```bash npm
+    npm run dev
+    ```
+    
+    ```bash yarn
+    yarn dev
+    ```
+    </CodeGroup>
+
+    Default frontend address: `http://localhost:5173`
+  </Step>
+
+  <Step title="Access the application">
+    Open your browser and navigate to:
+    
+    ```
+    http://localhost:5173
+    ```
+    
+    The frontend will communicate with the backend API at `http://localhost:3000`.
+  </Step>
+</Steps>
+
+<Warning>
+  Make sure PostgreSQL is running and properly configured before starting the backend server. The application will attempt to connect to the database on startup.
+</Warning>
+
+## Development Tools
+
+### Backend Development
+
+- **Nodemon**: Automatically restarts the server when file changes are detected
+- **ESLint**: Code linting and style enforcement
+- **Morgan**: HTTP request logger for debugging
+- **Express Promise Router**: Cleaner async route handling
+
+### Frontend Development
+
+- **Vite**: Lightning-fast dev server with Hot Module Replacement (HMR)
+- **React Developer Tools**: Browser extension for debugging React components
+- **Tailwind CSS**: Utility-first styling with PostCSS processing
+
+### Building for Production
+
+**Backend:**
+```bash
+npm start
+```
+
+**Frontend:**
+<CodeGroup>
+```bash npm
+npm run build
+npm run preview
+```
+
+```bash yarn
+yarn build
+yarn preview
+```
+</CodeGroup>
+
+The frontend build output will be in `frontend/dist/`.
+
+## Troubleshooting
+
+### Port Conflicts
+
+If the default ports are in use:
+
+1. **Backend**: Set `PORT` environment variable to use a different port
+2. **Frontend**: Vite will automatically try the next available port or you can configure it in `vite.config.js`
+
+### Database Connection Issues
+
+If the backend fails to connect to PostgreSQL:
+
+1. Verify PostgreSQL is running: `sudo systemctl status postgresql`
+2. Check your database credentials in environment variables
+3. Ensure the database exists: `psql -U postgres -l`
+4. Review connection logs in the terminal output
+
+### Module Not Found Errors
+
+If you encounter missing module errors:
+
+1. Delete `node_modules` and reinstall:
+   ```bash
+   rm -rf node_modules package-lock.json
+   npm install
+   ```
+
+2. Clear npm cache if needed:
+   ```bash
+   npm cache clean --force
+   ```
+
+### WebSocket Connection Failures
+
+The application uses both Socket.IO and native WebSockets. If real-time features aren't working:
+
+1. Check browser console for connection errors
+2. Verify CORS configuration in backend `src/app.js`
+3. Ensure the `ORIGIN` environment variable matches your frontend URL
+
+## Next Steps
+
+- [Configure environment variables](/development/environment-variables)
+- [Set up the database](/development/database-setup)
+- [Explore the API reference](/api/overview)
+- [Review architecture documentation](/development/architecture-overview)
