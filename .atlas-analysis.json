@@ -1,0 +1,138 @@
+{
+  "projectType": "saas",
+  "projectName": "SAFI ControlHub",
+  "projectDescription": "Real-time telemetry monitoring and control platform for rocket systems and test operations",
+  "theme": "aspen",
+  "primaryColor": "#61DAFB",
+  "lightColor": "#50C878",
+  "darkColor": "#0A192F",
+  "navigation": {
+    "tabs": [
+      {
+        "tab": "Documentation",
+        "groups": [
+          {
+            "group": "Get Started",
+            "pages": [
+              "introduction",
+              "quickstart",
+              "installation"
+            ]
+          },
+          {
+            "group": "Platform Features",
+            "pages": [
+              "features/dashboard",
+              "features/real-time-telemetry",
+              "features/test-bench-control",
+              "features/data-visualization"
+            ]
+          },
+          {
+            "group": "Devices",
+            "pages": [
+              "devices/overview",
+              "devices/xitzin-ii",
+              "devices/akbal-ii",
+              "devices/laniakea",
+              "devices/filamentadora",
+              "devices/banco-de-pruebas"
+            ]
+          },
+          {
+            "group": "User Guide",
+            "pages": [
+              "guide/authentication",
+              "guide/monitoring-telemetry",
+              "guide/controlling-devices",
+              "guide/viewing-data"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "API Reference",
+        "groups": [
+          {
+            "group": "REST API",
+            "pages": [
+              "api/overview",
+              "api/authentication",
+              "api/data-endpoints",
+              "api/device-control"
+            ]
+          },
+          {
+            "group": "WebSocket API",
+            "pages": [
+              "api/websocket-overview",
+              "api/websocket-events",
+              "api/real-time-channels"
+            ]
+          }
+        ]
+      },
+      {
+        "tab": "Development",
+        "groups": [
+          {
+            "group": "Setup",
+            "pages": [
+              "development/local-setup",
+              "development/environment-variables",
+              "development/database-setup"
+            ]
+          },
+          {
+            "group": "Architecture",
+            "pages": [
+              "development/architecture-overview",
+              "development/backend-structure",
+              "development/frontend-structure",
+              "development/serial-communication"
+            ]
+          },
+          {
+            "group": "Deployment",
+            "pages": [
+              "development/deployment-guide",
+              "development/production-config"
+            ]
+          }
+        ]
+      }
+    ]
+  },
+  "keyFeatures": [
+    "Real-time telemetry monitoring via WebSocket",
+    "Multiple rocket system support (XITZIN-II, AKBAL-II, Laniakea)",
+    "Test bench control and ignition system",
+    "Live data visualization with D3.js charts",
+    "3D rocket model rendering with Three.js",
+    "Battery status monitoring",
+    "Serial port communication for hardware integration",
+    "Interactive dashboard with SpaceX-inspired UI"
+  ],
+  "publicApiSurface": [
+    "POST /api/data - Submit telemetry data",
+    "GET /api/data - Retrieve telemetry data",
+    "POST /api/batteries - Update battery status",
+    "GET /api/batteries - Get battery status",
+    "POST /api/xitzin2data - Submit XITZIN-II telemetry",
+    "GET /api/xitzin2data - Get XITZIN-II telemetry",
+    "POST /api/bancodepruebas - Submit test bench data",
+    "GET /api/bancodepruebas - Get test bench data",
+    "POST /api/ignicion - Trigger ignition command",
+    "GET /api/ignicion - Get ignition status",
+    "POST /api/laniakea - Submit Laniakea data",
+    "GET /api/laniakea - Get Laniakea data",
+    "POST /api/signin - User authentication",
+    "POST /api/signup - User registration",
+    "WebSocket: nuevos-datos - Real-time telemetry stream",
+    "WebSocket: banco-datos - Test bench data stream",
+    "WebSocket: xitzin2-datos - XITZIN-II data stream",
+    "WebSocket: baterias - Battery status updates",
+    "WebSocket: laniakea - Laniakea telemetry stream",
+    "WebSocket: ignicion-estado - Ignition state events"
+  ]
+}
