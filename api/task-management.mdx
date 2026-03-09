@@ -1,0 +1,338 @@
+---
+title: 'Task Management'
+description: 'Create and manage tasks in SAFI ControlHub'
+---
+
+## Overview
+
+The Task Management API allows users to create, read, update, and delete tasks. Tasks can be used for mission planning, maintenance scheduling, or general project management within the ControlHub platform.
+
+## Get All Tasks
+
+GET /api/tasks
+
+Retrieve all tasks in the system.
+
+### Response
+
+<ResponseField name="tasks" type="array">
+  Array of task objects
+
+  <Expandable title="Task Object">
+    <ResponseField name="id" type="integer">
+      Unique task identifier
+    </ResponseField>
+    <ResponseField name="title" type="string">
+      Task title
+    </ResponseField>
+    <ResponseField name="description" type="string">
+      Task description (optional)
+    </ResponseField>
+    <ResponseField name="user_id" type="integer">
+      ID of the user who created the task
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET http://localhost:3000/api/tasks \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/tasks', {
+  method: 'GET',
+  credentials: 'include'
+});
+const tasks = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'http://localhost:3000/api/tasks',
+    headers={'Content-Type': 'application/json'}
+)
+tasks = response.json()
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "title": "Pre-flight systems check",
+    "description": "Verify all systems before XITZIN-II launch",
+    "user_id": 2
+  },
+  {
+    "id": 2,
+    "title": "Calibrate test bench sensors",
+    "description": "Recalibrate force and pressure sensors",
+    "user_id": 1
+  }
+]
+```
+
+## Get Task by ID
+
+GET /api/tasks/:id
+
+Retrieve a specific task by its ID. Requires authentication.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the task
+</ParamField>
+
+### Authentication
+
+Requires valid JWT token in cookies.
+
+### Example Request
+
+```bash
+curl -X GET http://localhost:3000/api/tasks/1 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: token=YOUR_JWT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "id": 1,
+  "title": "Pre-flight systems check",
+  "description": "Verify all systems before XITZIN-II launch",
+  "user_id": 2
+}
+```
+
+## Create Task
+
+POST /api/tasks
+
+Create a new task. Requires authentication.
+
+### Authentication
+
+Requires valid JWT token in cookies.
+
+### Request Body
+
+<ParamField body="title" type="string" required>
+  Task title (required, must be unique)
+</ParamField>
+
+<ParamField body="description" type="string">
+  Task description (optional)
+</ParamField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X POST http://localhost:3000/api/tasks \
+  -H "Content-Type: application/json" \
+  -H "Cookie: token=YOUR_JWT_TOKEN" \
+  -d '{
+    "title": "Review telemetry data",
+    "description": "Analyze data from last test flight"
+  }'
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/tasks', {
+  method: 'POST',
+  headers: {
+    'Content-Type': 'application/json'
+  },
+  credentials: 'include',
+  body: JSON.stringify({
+    title: 'Review telemetry data',
+    description: 'Analyze data from last test flight'
+  })
+});
+const task = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.post(
+    'http://localhost:3000/api/tasks',
+    headers={'Content-Type': 'application/json'},
+    json={
+        'title': 'Review telemetry data',
+        'description': 'Analyze data from last test flight'
+    }
+)
+task = response.json()
+```
+
+</CodeGroup>
+
+### Response
+
+```json
+{
+  "id": 3,
+  "title": "Review telemetry data",
+  "description": "Analyze data from last test flight",
+  "user_id": 1
+}
+```
+
+## Update Task
+
+PUT /api/tasks/:id
+
+Update an existing task. Requires authentication.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the task to update
+</ParamField>
+
+### Authentication
+
+Requires valid JWT token in cookies.
+
+### Request Body
+
+<ParamField body="title" type="string">
+  Updated task title
+</ParamField>
+
+<ParamField body="description" type="string">
+  Updated task description
+</ParamField>
+
+<Note>
+Both fields are optional. Include only the fields you want to update.
+</Note>
+
+### Example Request
+
+```bash
+curl -X PUT http://localhost:3000/api/tasks/3 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: token=YOUR_JWT_TOKEN" \
+  -d '{
+    "title": "Review and archive telemetry data",
+    "description": "Analyze data from last test flight and archive results"
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": 3,
+  "title": "Review and archive telemetry data",
+  "description": "Analyze data from last test flight and archive results",
+  "user_id": 1
+}
+```
+
+## Delete Task
+
+DELETE /api/tasks/:id
+
+Delete a task. Requires authentication.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the task to delete
+</ParamField>
+
+### Authentication
+
+Requires valid JWT token in cookies.
+
+### Example Request
+
+```bash
+curl -X DELETE http://localhost:3000/api/tasks/3 \
+  -H "Cookie: token=YOUR_JWT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "message": "Task deleted successfully"
+}
+```
+
+## Error Responses
+
+### 400 Bad Request
+
+```json
+{
+  "message": "Title is required"
+}
+```
+
+Returned when required fields are missing or validation fails.
+
+### 401 Unauthorized
+
+```json
+{
+  "message": "No token provided"
+}
+```
+
+Returned when authentication is required but no valid token is present.
+
+### 404 Not Found
+
+```json
+{
+  "message": "Task not found"
+}
+```
+
+Returned when the specified task ID does not exist.
+
+### 500 Internal Server Error
+
+```json
+{
+  "message": "Error message details"
+}
+```
+
+Returned when a server error occurs during request processing.
+
+## Use Cases
+
+<AccordionGroup>
+
+<Accordion title="Mission Planning">
+Create tasks for pre-flight checks, system verifications, and post-flight analysis. Assign tasks to team members based on their roles.
+</Accordion>
+
+<Accordion title="Maintenance Scheduling">
+Track maintenance tasks for test equipment, calibration schedules, and hardware inspections.
+</Accordion>
+
+<Accordion title="Project Management">
+Organize development tasks, documentation updates, and system improvements.
+</Accordion>
+
+</AccordionGroup>

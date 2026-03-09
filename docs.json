@@ -37,7 +37,8 @@
               "features/dashboard",
               "features/real-time-telemetry",
               "features/test-bench-control",
-              "features/data-visualization"
+              "features/data-visualization",
+              "features/team-management"
             ]
           },
           {
@@ -71,7 +72,9 @@
               "api/overview",
               "api/authentication",
               "api/data-endpoints",
-              "api/device-control"
+              "api/device-control",
+              "api/user-management",
+              "api/task-management"
             ]
           },
           {

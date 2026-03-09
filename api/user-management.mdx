@@ -1,0 +1,310 @@
+---
+title: 'User Management'
+description: 'Manage users and access logs in SAFI ControlHub'
+---
+
+## Overview
+
+The User Management API provides endpoints for administrators to manage user accounts and view system access logs. These endpoints require authentication and appropriate permissions.
+
+## Get All Users
+
+GET /api/users
+
+Retrieve a list of all registered users in the system.
+
+### Response
+
+<ResponseField name="users" type="array">
+  Array of user objects
+
+  <Expandable title="User Object">
+    <ResponseField name="id" type="integer">
+      Unique user identifier
+    </ResponseField>
+    <ResponseField name="name" type="string">
+      User's display name
+    </ResponseField>
+    <ResponseField name="email" type="string">
+      User's email address
+    </ResponseField>
+    <ResponseField name="role" type="integer">
+      User role level (1 = Guardia, 2 = Administrador)
+    </ResponseField>
+    <ResponseField name="gravatar" type="string">
+      Gravatar URL for profile avatar
+    </ResponseField>
+    <ResponseField name="created_at" type="timestamp">
+      Account creation timestamp
+    </ResponseField>
+    <ResponseField name="updated_at" type="timestamp">
+      Last account update timestamp
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Request
+
+<CodeGroup>
+
+```bash cURL
+curl -X GET http://localhost:3000/api/users \
+  -H "Content-Type: application/json"
+```
+
+```javascript JavaScript
+const response = await fetch('http://localhost:3000/api/users', {
+  method: 'GET',
+  credentials: 'include'
+});
+const users = await response.json();
+```
+
+```python Python
+import requests
+
+response = requests.get(
+    'http://localhost:3000/api/users',
+    headers={'Content-Type': 'application/json'}
+)
+users = response.json()
+```
+
+</CodeGroup>
+
+### Example Response
+
+```json
+[
+  {
+    "id": 1,
+    "name": "John Doe",
+    "email": "john@example.com",
+    "role": 2,
+    "gravatar": "https://gravatar.com/avatar/...",
+    "created_at": "2024-01-15T10:30:00Z",
+    "updated_at": "2024-01-15T10:30:00Z"
+  },
+  {
+    "id": 2,
+    "name": "Jane Smith",
+    "email": "jane@example.com",
+    "role": 1,
+    "gravatar": "https://gravatar.com/avatar/...",
+    "created_at": "2024-01-16T14:20:00Z",
+    "updated_at": "2024-01-16T14:20:00Z"
+  }
+]
+```
+
+## Get User by ID
+
+GET /api/users/:id
+
+Retrieve details for a specific user. Requires authentication.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the user
+</ParamField>
+
+### Authentication
+
+Requires valid JWT token in cookies.
+
+### Response
+
+Returns a single user object (same structure as above).
+
+### Example Request
+
+```bash
+curl -X GET http://localhost:3000/api/users/1 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: token=YOUR_JWT_TOKEN"
+```
+
+## Update User
+
+PUT /api/users/:id
+
+Update a user's information. Requires authentication.
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the user to update
+</ParamField>
+
+### Request Body
+
+<ParamField body="name" type="string" required>
+  User's display name (1-255 characters)
+</ParamField>
+
+<ParamField body="email" type="string" required>
+  Valid email address (must be unique)
+</ParamField>
+
+<ParamField body="password" type="string" required>
+  User password (minimum 6 characters, maximum 255)
+</ParamField>
+
+<ParamField body="level" type="integer" required>
+  User role level (1 = Guardia, 2 = Administrador)
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X PUT http://localhost:3000/api/users/1 \
+  -H "Content-Type: application/json" \
+  -H "Cookie: token=YOUR_JWT_TOKEN" \
+  -d '{
+    "name": "John Updated",
+    "email": "john.updated@example.com",
+    "password": "newpassword123",
+    "level": 2
+  }'
+```
+
+### Response
+
+```json
+{
+  "id": 1,
+  "name": "John Updated",
+  "email": "john.updated@example.com",
+  "role": 2,
+  "updated_at": "2024-01-20T09:15:00Z"
+}
+```
+
+## Delete User
+
+DELETE /api/users/:id
+
+Delete a user account. Requires authentication.
+
+<Warning>
+This action is permanent and cannot be undone. All user data will be removed from the system.
+</Warning>
+
+### Path Parameters
+
+<ParamField path="id" type="integer" required>
+  The unique identifier of the user to delete
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X DELETE http://localhost:3000/api/users/1 \
+  -H "Cookie: token=YOUR_JWT_TOKEN"
+```
+
+### Response
+
+```json
+{
+  "message": "User deleted successfully"
+}
+```
+
+## Access Logs
+
+### Get All Logs
+
+GET /api/userslog
+
+Retrieve system access logs showing user activity.
+
+### Response
+
+<ResponseField name="logs" type="array">
+  Array of log entry objects
+
+  <Expandable title="Log Entry Object">
+    <ResponseField name="id" type="integer">
+      Unique log entry identifier
+    </ResponseField>
+    <ResponseField name="user_id" type="integer">
+      ID of the user who performed the action
+    </ResponseField>
+    <ResponseField name="action" type="string">
+      Description of the action performed
+    </ResponseField>
+    <ResponseField name="timestamp" type="timestamp">
+      When the action occurred
+    </ResponseField>
+  </Expandable>
+</ResponseField>
+
+### Example Request
+
+```bash
+curl -X GET http://localhost:3000/api/userslog \
+  -H "Content-Type: application/json"
+```
+
+### Create Log Entry
+
+POST /api/userslog
+
+Create a new log entry to record user activity.
+
+### Request Body
+
+<ParamField body="user_id" type="integer" required>
+  ID of the user performing the action
+</ParamField>
+
+<ParamField body="action" type="string" required>
+  Description of the action being logged
+</ParamField>
+
+### Example Request
+
+```bash
+curl -X POST http://localhost:3000/api/userslog \
+  -H "Content-Type: application/json" \
+  -d '{
+    "user_id": 1,
+    "action": "Viewed dashboard"
+  }'
+```
+
+## Error Responses
+
+All endpoints may return these error responses:
+
+### 401 Unauthorized
+
+```json
+{
+  "message": "No token provided" 
+}
+```
+
+Returned when authentication is required but no valid token is present.
+
+### 404 Not Found
+
+```json
+{
+  "message": "User not found"
+}
+```
+
+Returned when the specified user ID does not exist.
+
+### 500 Internal Server Error
+
+```json
+{
+  "message": "Error message details"
+}
+```
+
+Returned when a server error occurs during request processing.

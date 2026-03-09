@@ -1,0 +1,206 @@
+---
+title: 'Team Management'
+description: 'Manage team members and access logs in SAFI ControlHub'
+---
+
+## Overview
+
+The Team Management feature allows administrators to manage user accounts, assign roles, and monitor system access. This centralized interface provides complete oversight of who has access to the ControlHub platform and their activity history.
+
+## Accessing Team Management
+
+<Steps>
+  <Step title="Navigate to Team Page">
+    From the main navigation sidebar, click on **Team** or **Users** to access the team management interface.
+  </Step>
+  
+  <Step title="View Team Members">
+    The team page displays all registered users in a table format with their details.
+  </Step>
+</Steps>
+
+<Note>
+Team management features are typically restricted to users with the Administrador role.
+</Note>
+
+## Team Member Table
+
+The team management interface displays users in a data grid with the following columns:
+
+<CardGroup cols={2}>
+  <Card title="User ID" icon="hashtag">
+    Unique identifier for each user account
+  </Card>
+  
+  <Card title="Name" icon="user">
+    User's display name as shown throughout the platform
+  </Card>
+  
+  <Card title="Email" icon="envelope">
+    User's registered email address for authentication
+  </Card>
+  
+  <Card title="Role" icon="shield">
+    User role level (Guardia or Administrador)
+  </Card>
+</CardGroup>
+
+### Table Features
+
+- **Sortable columns** - Click column headers to sort by any field
+- **Search functionality** - Filter users by name, email, or role
+- **Pagination** - Navigate through large team lists efficiently
+- **Quick actions** - Edit or delete users directly from the table
+
+## Managing Users
+
+### Editing User Accounts
+
+<Steps>
+  <Step title="Select User">
+    Click the **Edit** button next to the user you want to modify
+  </Step>
+  
+  <Step title="Update Information">
+    Modify any of the following fields:
+    - Username
+    - Email address
+    - Password
+    - User role (Guardia/Administrador)
+  </Step>
+  
+  <Step title="Save Changes">
+    Click **Save** to update the user account
+  </Step>
+</Steps>
+
+<Warning>
+Changing a user's role will immediately affect their access permissions. Downgrading an Administrador to Guardia will revoke their administrative privileges.
+</Warning>
+
+### Removing Users
+
+<Steps>
+  <Step title="Select User">
+    Click the **Delete** button next to the user you want to remove
+  </Step>
+  
+  <Step title="Confirm Deletion">
+    Confirm the action in the dialog prompt
+  </Step>
+</Steps>
+
+<Warning>
+User deletion is permanent and cannot be undone. All associated data and tasks will be removed.
+</Warning>
+
+## Access Logs
+
+The **Users Log** feature provides visibility into system access and user activity.
+
+### Viewing Access Logs
+
+<Steps>
+  <Step title="Navigate to Logs">
+    Click on **Users Log** or **Access Logs** in the navigation menu
+  </Step>
+  
+  <Step title="Review Activity">
+    View the chronological log of user actions including:
+    - Login/logout events
+    - Page views
+    - Device control actions
+    - Data access
+  </Step>
+</Steps>
+
+### Log Information
+
+Each log entry displays:
+
+- **Timestamp** - When the action occurred
+- **User** - Which user performed the action
+- **Action** - Description of what was done
+- **Result** - Success or failure status
+
+<Info>
+Access logs are valuable for security auditing, troubleshooting user issues, and monitoring system usage patterns.
+</Info>
+
+## User Roles and Permissions
+
+### Guardia (Guard)
+
+Standard user role with monitoring capabilities:
+
+- View dashboards and telemetry data
+- Access device monitoring interfaces
+- View battery status and system health
+- Cannot modify system settings
+- Cannot manage other users
+- Cannot execute control commands
+
+### Administrador (Administrator)
+
+Full access role with complete control:
+
+- All Guardia permissions, plus:
+- Execute device control commands (ignition, etc.)
+- Manage user accounts (create, edit, delete)
+- Access team management interface
+- View and manage access logs
+- Configure system settings
+- Full administrative privileges
+
+<Tip>
+Assign the Administrador role only to trusted team members who require full system control. Use Guardia for monitoring-only personnel.
+</Tip>
+
+## Best Practices
+
+<AccordionGroup>
+
+<Accordion title="Regular Access Reviews">
+Periodically review your team list and remove accounts for users who no longer need access. This reduces security risks and keeps your user base current.
+</Accordion>
+
+<Accordion title="Role-Based Access">
+Follow the principle of least privilege - assign users the minimum role required for their responsibilities. Most monitoring personnel should use the Guardia role.
+</Accordion>
+
+<Accordion title="Monitor Access Logs">
+Regularly review access logs to identify unusual activity patterns, potential security issues, or training needs.
+</Accordion>
+
+<Accordion title="Secure Credentials">
+Enforce strong password policies and encourage users to use unique passwords for their ControlHub accounts.
+</Accordion>
+
+</AccordionGroup>
+
+## Integration with Other Features
+
+Team management integrates with:
+
+- **Authentication** - User credentials are validated against the team database
+- **Task Management** - Tasks can be assigned to specific team members
+- **Device Control** - Role-based permissions determine who can execute commands
+- **Audit Trail** - All team changes are logged for security tracking
+
+## Troubleshooting
+
+<AccordionGroup>
+
+<Accordion title="Cannot Edit Users">
+Ensure you're logged in with an Administrador account. Only administrators can modify user accounts.
+</Accordion>
+
+<Accordion title="User List Not Loading">
+Check your network connection and ensure the backend API is running. Refresh the page and verify you have proper authentication.
+</Accordion>
+
+<Accordion title="Email Already Exists Error">
+Each user must have a unique email address. If you're trying to update a user's email to one that's already registered, choose a different email.
+</Accordion>
+
+</AccordionGroup>
